@@ -12,7 +12,7 @@ Definition Table
 begin_metadata
 "\IsReadOnly" = "FALSE"
 "\MapInfo" = ""
-"\MapInfo\TableID" = "a1415b56-1c88-426a-a97a-b0338c07541d"
+"\MapInfo\TableID" = "b038ee96-7925-44cc-95b0-e8f040bc3f04"
 "\DATALINK" = ""
 "\DATALINK\Query" = "Select *  From ""geodbdev"".""sde"".""admprov"""
 "\DATALINK\ConnectionString" =

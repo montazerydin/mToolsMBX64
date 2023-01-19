@@ -42,7 +42,7 @@ End If
 	Call GetColList
 
 	Dialog
-		Title "Split Tabel using Column"
+		Title "Split Table by Column"
 		Position 500,125
 			Control StaticText Title "Select Table:" Position 3dW, 1dH
 			Control PopUpMenu Title From Variable sTableList into iTableName ID PopupID Position 3dW, 2.5dH Width 45dW Calling sRedoColList Value iTableName

@@ -26,16 +26,6 @@ Global sProjName, sProjList As String
 Global tbstat As Logical
 Global sKeyPhrase As String
 
-Global gtbstat As Logical
-Global g_graticule_on as logical
-Global g_graticule_index(MAX_NOOF_GRATICULES) as Tmap_graticule_ref
-Global g_central_meridian as object
-Global g_equator as object
-Global g_north_pole as object
-Global g_south_pole as object
-Global g_default_gridpen as pen
-Global g_default_gridinterval_denom as smallint 'see get_grid_interval() for use
-
 Global arrFilePaths() As String
 Global nCAD As Integer
 Global sCadName() As String

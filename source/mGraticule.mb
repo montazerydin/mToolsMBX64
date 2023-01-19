@@ -386,7 +386,7 @@ end sub
 ' end program
 ' end sub
 '*******
-sub EndHandler
+sub gEndHandler
 dim index_no as integer
 for index_no = 1 to MAX_NOOF_GRATICULES 
 	call remove_graticule(index_no)
@@ -395,7 +395,7 @@ next
 Alter menu item graticule_M_MAP_OPTIONS_handler
 	calling M_MAP_OPTIONS
 
-end sub 'EndHandler
+end sub 'gEndHandler
 '********
 ' sub about_graticule_handler
 ' dim about_text, about_line as string

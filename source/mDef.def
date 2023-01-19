@@ -37,33 +37,6 @@ Define KEY_READ &H20019 		'Permission for general read access.
 Define KEY_SET_VALUE &H2 		'Permission to set subkey data. 
 Define KEY_WRITE &H20006		'Permission for general write access. 
 
-Define MAX_NOOF_GRATICULES 10
-
-Define C_LONGITUDE_LINE  1
-Define C_LATITUDE_LINE  2
-Define C_WRAPPING 1
-Define C_NONWRAPPING 2
-Define C_LABEL_POSITION_DEFAULT 1
-Define C_LABEL_POSITION_MIN_INTERSECT 2
-
-
-'control ids for function local_graticule_options_dialog
-Define noof_gridlines_ID 100
-
-'return values for function local_graticule_options_dialog:
-Define k_local_options_error -1
-Define k_local_options_nochange 1
-Define k_local_options_changeOK 0
-
-Define MFish_menu_AddGraticule 		101 
-Define MFish_menu_RemoveGraticule 		102
-Define MFish_menu_ExitGraticule 		103
-Define MFish_menu_AboutGraticule 		104
-Define MFish_menu_GlobalGraticuleOptions	105
-Define MFish_menu_LocalGraticuleOptions 	106
-
-Define pi 180*0.01745329252
-
 Define NORMAL_PRIORITY_CLASS &H20
 Define INFINITE -1
 

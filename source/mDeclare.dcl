@@ -14,6 +14,8 @@
 '(terpisah berdasarkan file MB yang menggunakannya)
 
 Include "mapbasic.def"
+Include "Enums.def"
+Include "IMapInfoPro.def"
 Include "icons.def"
 Include "menu.def"
 Include "mType.typ"
@@ -27,6 +29,7 @@ Declare Sub LoginUI
 Declare Sub Bye 
 Declare Sub cancel_handler
 Declare Sub LoadApp
+Declare Sub EndHandler
 
 'sub_mTools.mb
 Declare Sub GetTables	
@@ -54,21 +57,12 @@ Declare Sub SortDlgPart3
 Declare Sub SortDlgPart4
 Declare Sub SortDlgPart5
 
-'worpath_mTools.mb
-Declare Sub wToolHandler
-
 'label_mTools.mb
 Declare Sub LabelDialog			
 Declare Sub lRedoColList 		
 Declare Sub LabelDialogPart2
 Declare Sub LabelDialogPart3
 Declare Sub LabelDialogPart4
-
-'syncfrm_mTools.mb
-Declare Sub mSyncFrame
-
-'mpack_mTools.mb
-Declare Sub PackDlg
 
 'selstyle_mTools.mb
 Declare Sub Buttonhandler
@@ -85,10 +79,6 @@ Declare Sub UserCanceled
 'qcleaner_mTools.mb
 Declare Sub QClean
 Declare Sub QCleaner
-
-'shortcuts_mTools.mb
-Declare Sub mShort
-Declare Sub ExitShort
 
 'uptext_mTools.mb
 Declare Sub upText
@@ -127,77 +117,6 @@ Declare Sub SetRegistryInt(ByVal hKey As Integer, ByVal sEntry As String, ByVal 
 Declare Sub WriteRegistryStr(ByVal Group As Integer, ByVal Section As String, ByVal Key As String, ByVal ValType As SmallInt, ByVal sValue As String)
 Declare Sub WriteRegistryInt(ByVal Group As Integer, ByVal Section As String, ByVal Key As String, ByVal ValType As SmallInt, ByVal iValue As Integer)
 Declare Sub DeleteRegKey(ByVal Group As Integer, ByVal Section As String, ByVal Key As String)
-
-' graticule.mb
-Declare Sub grtbhandler
-Declare Sub grTBStat (ByVal stat As Logical)
-Declare Sub maingrat
-Declare Sub WinChangedHandler
-Declare Sub draw_graticule(graticule_index as integer)
-Declare Sub graticule_M_MAP_OPTIONS_handler
-Declare Sub graticule_debug(ByVal debug_level as integer, ByVal debug_message as string)
-Declare Sub check_graticule_coordsys(target_graticule as integer)
-Declare Sub update_graticule_coordsys(target_graticule as integer)
-Declare Sub update_graticule_bounds(index_no as integer)
-Declare Sub set_coordsys_GraticuleCoordsys(index_no as integer)
-Declare Sub add_graticule_handler
-Declare Sub remove_graticule_handler
-Declare Sub remove_graticule(index_no as integer)
-' Declare Sub exit_graticule_handler
-' Declare Sub about_graticule_handler
-Declare Sub EndHandler
-Declare Sub WinClosedHandler
-Declare Sub global_options_menu_handler
-Declare Sub local_graticule_options_menuhandler
-Declare Sub GridOptions_OKButton_Handler
-Declare Function local_graticule_options_dialog(ByVal index_no as integer) as smallint
-Declare Function add_new_graticule_layer(target_window as integer, index_no as integer) as logical
-Declare Function get_graticule_index(ByVal mapwinid as integer) as integer
-Declare function create_straight_autogrid_line(byval from_x as float, byval from_y as float, byval to_x as float, byval to_y as float, byval line_type as integer, byval graticule_index as integer, byval label_positioning as integer) as logical
-Declare sub create_straight_autogrid_line_nocheck(byval from_x as float, byval from_y as float, byval to_x as float, byval to_y as float, byval line_type as integer, byval graticule_index as integer)
-Declare function create_circle_autogrid_line(byval lat as float, graticule_index as integer, from_x as float) as logical
-Declare FUNCTION create_warped_autogrid_line(byval from_x as float, 
-            byval from_y as float, 
-            byval to_x as float, 
-            byval to_y as float, 
-            byval line_type as integer, 
-            byval grid_interval as float,
-            byval labelling_object as object,
-            byval graticule_index as integer) AS LOGICAL
-Declare function format_label(line_value as float, byval xy as integer, byval units as string) as string
-Declare function decdeg2d_dm(byval decdeg as float, byval latlong as integer) as string
-
-
-' misc_tools.mb
-Declare Function TableAvailable(ByVal tablename as string) as logical
-Declare Function get_temporary_tablename() as string
-Declare Function get_coordsys_projection(ByVal coordsys_string as string) as integer
-Declare Function get_coordsys_gridunits(ByVal coordsys_string as string) as string
-Declare Function get_free_fileno() as integer
-Declare Function get_layerno_named(ByVal win_id as integer, ByVal layername as string) as smallint
-Declare Function FrontMapperID() as integer
-Declare Function extract_delimitedlist_item_no(ByVal list_str As String, ByVal delimiter_str as string, ByVal target_item_no as integer) as string
-Declare Function find_nth_occurrence(ByVal search_string as string, ByVal target_string as string, ByVal n as integer) as integer
-Declare Function AntiCW_bearing_dec_ll(	ByVal d_lat1 as float, ByVal d_lon1 as float, 
-				ByVal d_lat2 as float, ByVal d_lon2 as float, bearing as float) as logical
-Declare Function get_coordsys_datum(ByVal coordsys_string as string) as integer
-Declare Function parse_coordsys_projection_clause(ByVal	coordsys_string as string,
-				projection_no as integer, datum_no as integer, units as string) as logical
-Declare Function DatumNo2DatumName(ByVal datum_no as integer) as string
-Declare Sub Debug(ByVal this_debug_level as integer, ByVal debug_message as string, ByVal current_active_debug_level as integer)
-
-' projections.mb
-Declare Sub update_default_mapper_gridlines(index_no as integer)
-Declare Sub update_PolarAzimuthal_gridlines(index_no as integer)
-Declare Sub update_latlongNZMG_gridlines(graticule_index as integer)
-Declare Sub determine_critical_intersections(graticule_index as integer, cmig as logical, npig as logical, spig as logical, eqig as logical)
-Declare Function get_first_grid(win_boundary as float, grid_interval as float) as float
-'Declare Function get_grid_interval(ByVal win_siz as float, ByVal interval_units as string) as float
-Declare Function get_grid_interval(ByVal win_siz as float, ByVal interval_units as string, ByVal grid_interval_denominator as smallint) as float
-Declare Function max_noof_intervals(interval_units as string) as integer
-Declare Function get_deg_interval_indexed(i as integer) as float
-Declare Function get_m_interval_indexed(i as integer) as float
-Declare Function get_interval_indexed(interval_index as integer, interval_units as string) as float
 
 'mCAD_mTools.mb
 Declare Sub mCAD

@@ -1,0 +1,279 @@
+'===============================================================================
+'**
+'**		Author				: Montazery Hasibuan
+'**		Email				: --insert your email here--
+'**
+'**		Filename			: mToolsMBX.mb
+'**		Date Created		: 17 Nov 2010
+'**		Last Modified		: 2014-06-14 10:11 AM
+'**
+
+'===============================================================================
+
+
+Include "mDeclare.dcl"
+Include "Library\RIBBONLib.def"
+
+Dim mnFirstBaseMapControlID as Integer
+
+Dim marrBaseMapNames() as String,
+	marrBaseMapImages() as String
+	
+
+'*********************************************************************************************
+Sub Main 								'Prosedur utama program, disini awal program berjalan
+'*********************************************************************************************
+
+	If FileExists(ApplicationDirectory$()+"mLibrary.dll")
+	Then
+	Else
+		Note "You have missing dependencies file(s), please contact" + 			
+		" the program author." + Chr$(13) + "Thank You."
+		End Program
+	End If
+
+Call MainTools
+
+
+End Sub													'Akhir dari prosedur Main
+
+
+'*********************************************************************************************
+Sub MainTools 											'Prosedur menu dan button
+'*********************************************************************************************
+
+Dim nCtrlIdx as Integer,
+	sTabName as String,
+	sGroupName, sGroupNamec, sGroupNamed as String
+
+Dim i as Integer
+
+'Call RBNNotificationShow("mToolsMBX Ribbon Version", "Launching...", Notify_Info, 2000)
+
+sTabName = "mToolsMBX"
+If NOT RBNTabExists(sTabName) Then
+	nCtrlIdx = RBNAddTab(sTabName, "mToolsMBX", "M")
+	If nCtrlIdx = 0 Then
+		Note "An Error occured while adding a tab called & '" & sTabName & "' to the ribbon!"
+		Exit Sub
+	End If
+End If
+
+sGroupName = "grpTools"
+If Not RBNTabGroupExists(sTabName, sGroupName) Then
+	nCtrlIdx = RBNTabAddGroup(sGroupName, "Tools", sTabName)
+	If NOT nCtrlIdx > 0 Then
+		Exit Sub
+	End If
+End If
+
+	nCtrlIdx = RBNGroupAddButton("ctrUpCol", "Update Column", "", sTabName, sGroupName)
+	If nCtrlIdx > 0 Then
+		Call RBNControlSetToolTipIdx(nCtrlIdx, "Update column", "Update a column with length or area value", "")
+		Call RBNControlSetIconsIdx(nCtrlIdx, CONTROL_SIZE_LARGE, "", ApplicationDirectory$() & "icon\updatecolumn.png")
+		Call RBNControlSetCustomMBXHandlerIdx(nCtrlIdx, "ListDialog")
+	End If		
+	
+	nCtrlIdx = RBNGroupAddButton("ctrSplitTab", "Split Table", "", sTabName, sGroupName)
+	If nCtrlIdx > 0 Then
+		Call RBNControlSetToolTipIdx(nCtrlIdx, "Split Table", "Split Table by Column", "")
+		Call RBNControlSetIconsIdx(nCtrlIdx, CONTROL_SIZE_LARGE, "", ApplicationDirectory$() & "icon\split.png")
+		Call RBNControlSetCustomMBXHandlerIdx(nCtrlIdx, "SplitTable")
+	End If
+
+	nCtrlIdx = RBNGroupAddButton("ctrSortTab", "Sort Table", "", sTabName, sGroupName)
+	If nCtrlIdx > 0 Then
+		Call RBNControlSetToolTipIdx(nCtrlIdx, "Sort Table", "Sort Table by Column", "")
+		Call RBNControlSetIconsIdx(nCtrlIdx, CONTROL_SIZE_LARGE, "", ApplicationDirectory$() & "icon\sort.png")
+		Call RBNControlSetCustomMBXHandlerIdx(nCtrlIdx, "SortDlg")
+	End If
+
+	nCtrlIdx = RBNGroupAddButton("ctrUpText", "Update from Text", "", sTabName, sGroupName)
+	If nCtrlIdx > 0 Then
+		Call RBNControlSetToolTipIdx(nCtrlIdx, "Update from Text", "Update Column from Text Table", "")
+		Call RBNControlSetIconsIdx(nCtrlIdx, CONTROL_SIZE_LARGE, "", ApplicationDirectory$() & "icon\updatetext.png")
+		Call RBNControlSetCustomMBXHandlerIdx(nCtrlIdx, "upText")
+	End If
+	
+	nCtrlIdx = RBNGroupAddControl("separator1", "", "", ControlType_RibbonSeparator, sTabName, sGroupName)
+	If nCtrlIdx > 0 Then
+	End If		
+	
+	nCtrlIdx = RBNGroupAddButton("ctrAutoLabel", "Auto Label", "", sTabName, sGroupName)
+	If nCtrlIdx > 0 Then
+		Call RBNControlSetToolTipIdx(nCtrlIdx, "Auto Label", "Autolabel with Expression", "")
+		Call RBNControlSetIconsIdx(nCtrlIdx, CONTROL_SIZE_LARGE, "", ApplicationDirectory$() & "icon\autolabel.png")
+		Call RBNControlSetCustomMBXHandlerIdx(nCtrlIdx, "LabelDialog")
+	End If
+
+	nCtrlIdx = RBNGroupAddButton("ctrReProjTab", "Reproject Table", "", sTabName, sGroupName)
+	If nCtrlIdx > 0 Then
+		Call RBNControlSetToolTipIdx(nCtrlIdx, "Reproject Table", "Reproject multi tables", "")
+		Call RBNControlSetIconsIdx(nCtrlIdx, CONTROL_SIZE_LARGE, "", ApplicationDirectory$() & "icon\projection.png")
+		Call RBNControlSetCustomMBXHandlerIdx(nCtrlIdx, "ReProjTab")
+	End If
+	
+	nCtrlIdx = RBNGroupAddControl("separator2", "", "", ControlType_RibbonSeparator, sTabName, sGroupName)
+	If nCtrlIdx > 0 Then
+	End If		
+	
+	nCtrlIdx = RBNGroupAddButton("ctrQryCln", "Query Cleaner", "", sTabName, sGroupName)
+	If nCtrlIdx > 0 Then
+		Call RBNControlSetToolTipIdx(nCtrlIdx, "Query Cleaner", "Close all Query Table", "")
+		Call RBNControlSetIconsIdx(nCtrlIdx, CONTROL_SIZE_LARGE, "", ApplicationDirectory$() & "icon\queryclean.png")
+		Call RBNControlSetCustomMBXHandlerIdx(nCtrlIdx, "QClean")
+	End If
+	
+	nCtrlIdx = RBNGroupAddButton("ctrSelStyle", "Select By Style", "", sTabName, sGroupName)
+	If nCtrlIdx > 0 Then
+		Call RBNControlSetToolTipIdx(nCtrlIdx, "Select By Style", "Select objects by style", "")
+		Call RBNControlSetIconsIdx(nCtrlIdx, CONTROL_SIZE_LARGE, "", ApplicationDirectory$() & "icon\selstyle.png")
+		Call RBNControlSetCustomMBXHandlerIdx(nCtrlIdx, "Buttonhandler")
+	End If	
+	
+	nCtrlIdx = RBNGroupAddButton("ctrEditLyr", "Auto Edit Layer", "", sTabName, sGroupName)
+	If nCtrlIdx > 0 Then
+		Call RBNControlSetToolTipIdx(nCtrlIdx, "Auto Edit Layer", "Set Layer Editable Automatically", "DO IT WITH YOUR OWN RISK")
+		Call RBNControlSetIconsIdx(nCtrlIdx, CONTROL_SIZE_LARGE, "", ApplicationDirectory$() & "icon\autoedit.png")
+		Call RBNControlSetCustomMBXHandlerIdx(nCtrlIdx, "tbHandler")
+	End If
+
+sGroupNamec = "grpmConvertion"
+If Not RBNTabGroupExists(sTabName, sGroupNamec) Then
+	nCtrlIdx = RBNTabAddGroup(sGroupNamec, "Convertion", sTabName)
+	If NOT nCtrlIdx > 0 Then
+		Exit Sub
+	End If
+End If	
+	
+	nCtrlIdx = RBNGroupAddButton("ctrImDwg", "Import DWG/DXF", "", sTabName, sGroupNamec)
+	If nCtrlIdx > 0 Then
+		Call RBNControlSetToolTipIdx(nCtrlIdx, "Import DWG/DXF", "Import Multiple DWG/DXF Files", "")
+		Call RBNControlSetIconsIdx(nCtrlIdx, CONTROL_SIZE_LARGE, "", ApplicationDirectory$() & "icon\cad.png")
+		Call RBNControlSetCustomMBXHandlerIdx(nCtrlIdx, "mCAD")
+	End If
+
+	nCtrlIdx = RBNGroupAddButton("ctrImGdb", "Import Garmin GDB", "", sTabName, sGroupNamec)
+	If nCtrlIdx > 0 Then
+		Call RBNControlSetToolTipIdx(nCtrlIdx, "Import Garmin GDB", "Import Multiple Garmin GDB Files", "")
+		Call RBNControlSetIconsIdx(nCtrlIdx, CONTROL_SIZE_LARGE, "", ApplicationDirectory$() & "icon\gps.png")
+		Call RBNControlSetCustomMBXHandlerIdx(nCtrlIdx, "mGDB")
+	End If
+
+sGroupNamed = "grpHelp"
+If Not RBNTabGroupExists(sTabName, sGroupNamed) Then
+	nCtrlIdx = RBNTabAddGroup(sGroupNamed, "Help", sTabName)
+	If NOT nCtrlIdx > 0 Then
+		Exit Sub
+	End If
+End If
+
+	nCtrlIdx = RBNGroupAddButton("ctrHelp", "Help", "", sTabName, sGroupNamed)
+	If nCtrlIdx > 0 Then
+		Call RBNControlSetToolTipIdx(nCtrlIdx, "Help", "mToolsMBX Help File", "")
+		Call RBNControlSetIconsIdx(nCtrlIdx, CONTROL_SIZE_LARGE, "", ApplicationDirectory$() & "icon\helpfile.png")
+		Call RBNControlSetCustomMBXHandlerIdx(nCtrlIdx, "MnuHelp")
+	End If	
+
+	nCtrlIdx = RBNGroupAddButton("ctrAbout", "About mToolsMBX", "", sTabName, sGroupNamed)
+	If nCtrlIdx > 0 Then
+		Call RBNControlSetToolTipIdx(nCtrlIdx, "About mToolsMBX", "mToolsMBX Description Dialog", "")
+		Call RBNControlSetIconsIdx(nCtrlIdx, CONTROL_SIZE_LARGE, "", ApplicationDirectory$() & "icon\about.png")
+		Call RBNControlSetCustomMBXHandlerIdx(nCtrlIdx, "aboutprog")
+	End If	
+
+	nCtrlIdx = RBNGroupAddButton("ctrExit", "Exit", "", sTabName, sGroupNamed)
+	If nCtrlIdx > 0 Then
+		Call RBNControlSetToolTipIdx(nCtrlIdx, "Exit mToolsMBX", "Exit mToolsMBX Program", "")
+		Call RBNControlSetIconsIdx(nCtrlIdx, CONTROL_SIZE_LARGE, "", ApplicationDirectory$() & "icon\close.png")
+		Call RBNControlSetCustomMBXHandlerIdx(nCtrlIdx, "Bye")
+	End If	
+
+tbstat = FALSE
+
+End Sub
+
+
+'*********************************************************************************************
+Sub Bye													'Prosedur keluar aplikasi
+'*********************************************************************************************
+
+Dim keluar as Logical									'Pendeklarasian variabel yang digunakan untuk prosedur keluar aplikasi
+
+'Inisiasi variabel keluar dengan fungsi Ask
+keluar = Ask ("Apakah Anda ingin keluar dari aplikasi mTools?", "Ya", "Tidak")
+  
+  If (keluar) Then
+		End Program
+    Else
+  End If
+
+End Sub
+
+
+'*********************************************************************************************
+Sub cancel_handler										'Prosedur untuk menangkap pilihan user saat registrasi
+'*********************************************************************************************
+
+  If TriggerControl() = CancelID1
+	Then
+		Exit Sub
+  End If
+  
+End Sub
+
+
+'*********************************************************************************************
+Sub LoadApp												'Prosedur input nilai registri untuk autoload aplikasi
+'*********************************************************************************************
+
+Dim askLoad As Logical
+Dim sAppDir As String
+
+askLoad = Ask("Make mToolsMBX autoload?", "Yes", "No")
+sAppDir = ApplicationDirectory$() + "mTools.MBX"
+
+'Penulisan ke registri berdasarkan versi MapInfo yang digunakan
+  If (askLoad) Then
+		If SystemInfo(SYS_INFO_MIVERSION) = 1050 Then
+				Call WriteRegistryInt(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1050\Tools\80000\", "Autoload", REG_DWORD, 1)
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1050\Tools\80000\", "Description", REG_SZ, "A collection of handy tools.")
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1050\Tools\80000\", "Location", REG_SZ, sAppDir)
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1050\Tools\80000\", "Owner", REG_SZ, "USER_DEFINED")
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1050\Tools\80000\", "Title", REG_SZ, "@mToolsMBX")
+			ElseIf SystemInfo(SYS_INFO_MIVERSION) = 1100 Then
+				Call WriteRegistryInt(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1100\Tools\80000\", "Autoload", REG_DWORD, 1)
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1100\Tools\80000\", "Description", REG_SZ, "A collection of handy tools.")
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1100\Tools\80000\", "Location", REG_SZ, sAppDir)
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1100\Tools\80000\", "Owner", REG_SZ, "USER_DEFINED")
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1100\Tools\80000\", "Title", REG_SZ, "@mToolsMBX")
+			ElseIf SystemInfo(SYS_INFO_MIVERSION) = 1150 Then
+				Call WriteRegistryInt(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1150\Tools\80000\", "Autoload", REG_DWORD, 1)
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1150\Tools\80000\", "Description", REG_SZ, "A collection of handy tools.")
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1150\Tools\80000\", "Location", REG_SZ, sAppDir)
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1150\Tools\80000\", "Owner", REG_SZ, "USER_DEFINED")
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1150\Tools\80000\", "Title", REG_SZ, "@mToolsMBX")
+			ElseIf SystemInfo(SYS_INFO_MIVERSION) = 1200 Then
+				Call WriteRegistryInt(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1200\Tools\80000\", "Autoload", REG_DWORD, 1)
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1200\Tools\80000\", "Description", REG_SZ, "A collection of handy tools.")
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1200\Tools\80000\", "Location", REG_SZ, sAppDir)
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1200\Tools\80000\", "Owner", REG_SZ, "USER_DEFINED")
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1200\Tools\80000\", "Title", REG_SZ, "@mToolsMBX")
+			ElseIf SystemInfo(SYS_INFO_MIVERSION) = 1250 Then
+				Call WriteRegistryInt(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1250\Tools\80000\", "Autoload", REG_DWORD, 1)
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1250\Tools\80000\", "Description", REG_SZ, "A collection of handy tools.")
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1250\Tools\80000\", "Location", REG_SZ, sAppDir)
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1250\Tools\80000\", "Owner", REG_SZ, "USER_DEFINED")
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1250\Tools\80000\", "Title", REG_SZ, "@mToolsMBX")
+		End If
+	 Else
+  End If
+
+End Sub
+
+Sub EndHandler
+
+	'**Ask the RibbonLib to tidy up before the app ends
+	Call RBNEndHandler
+	
+End Sub

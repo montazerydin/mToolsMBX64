@@ -1,5 +1,5 @@
 !table
-!version 1000
+!version 300
 !charset WindowsLatin1
 
 Definition Table
@@ -12,7 +12,7 @@ Definition Table
 begin_metadata
 "\IsReadOnly" = "FALSE"
 "\MapInfo" = ""
-"\MapInfo\TableID" = "67ae5f56-754d-4ea0-8cf2-6debfe733bef"
+"\MapInfo\TableID" = "803e894c-558f-40d1-a25f-b5ebcc49b1b3"
 "\DATALINK" = ""
 "\DATALINK\Query" = "Select *  From ""geodbdev"".""sde"".""admprov"""
 "\DATALINK\ConnectionString" =

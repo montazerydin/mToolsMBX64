@@ -11,8 +11,13 @@
 '===============================================================================
 
 [Link] 
-Application=mToolsMBX.mbx
-Module=mToolsMBX.mbo
+Application=..\mToolsMBX64.mbx
+Module=Library\ARRAYLib.mbo
+Module=Library\DEBUGLib.mbo
+Module=Library\ERRORLib.mbo
+Module=Library\RIBBONLib.mbo
+Module=Library\MAPPERLib.mbo
+Module=mToolsMBX64.mbo
 Module=mSub.mbo
 Module=mfunc.mbo
 Module=mRegistry.mbo
@@ -24,13 +29,8 @@ Module=mAutoLabel.mbo
 Module=mReprojection.mbo
 Module=mCAD.mbo
 Module=mGDB.mbo
-Module=mWorkspacePath.mbo
-Module=mShortcuts.mbo
-Module=mPackTable.mbo
 Module=mQueryCleaner.mbo
 Module=mSelbyStyle.mbo
-Module=mSyncFrame.mbo
-Module=mGraticule.mbo
 Module=mAutoEdit.mbo
 Module=mHelp.mbo
 Module=mAbout.mbo

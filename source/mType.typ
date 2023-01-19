@@ -28,22 +28,22 @@ Type BrowseInfo
 		 iImage As integer
 End Type
 
-Type Tmap_graticule_ref
-	map_win_id as integer
-	win_minx as float
-	win_miny as float
-	win_maxx as float
-	win_maxy as float
-	tablename as string
-	coordsys_string as string
-	projection as integer
-	gridunits as string
-	warped as logical
-	mapper_bounds_obj as object
-	gridinterval_denom as smallint
-	gridpen as pen
-	mapper_bounds_obj_latlong as object
-End Type
+'Type Tmap_graticule_ref
+'	map_win_id as integer
+'	win_minx as float
+'	win_miny as float
+'	win_maxx as float
+'	win_maxy as float
+'	tablename as string
+'	coordsys_string as string
+'	projection as integer
+'	gridunits as string
+'	warped as logical
+'	mapper_bounds_obj as object
+'	gridinterval_denom as smallint
+'	gridpen as pen
+'	mapper_bounds_obj_latlong as object
+'End Type
 
 Type STARTUPINFO
 	cb As Integer
