@@ -1,0 +1,47 @@
+'===============================================================================
+'**
+'**		Author				: Montazery Hasibuan
+'**		Email				: --insert your email here--
+'**
+'**		Filename			: mGlobal.glb
+'**		Date Created		: 17 Nov 2010
+'**		Last Modified		: 2014-06-14 10:11 AM
+'**
+
+'===============================================================================
+
+'Pendeklarasian variabel yang bersifat global
+
+Global sTableList() as String
+Global sColumnList() as String
+Global iTableName as Integer
+Global i_select, s_select as Integer
+Global iSplit1, iSplit2 as Integer
+Global tColSel As Integer
+Global TableSelect as String
+Global iTableSelArray() As Integer
+Global NOOT, lpn, qy As Integer
+Global gsUser, gsEmail, gsPass As String
+Global sProjName, sProjList As String
+Global tbstat As Logical
+Global sKeyPhrase As String
+
+Global gtbstat As Logical
+Global g_graticule_on as logical
+Global g_graticule_index(MAX_NOOF_GRATICULES) as Tmap_graticule_ref
+Global g_central_meridian as object
+Global g_equator as object
+Global g_north_pole as object
+Global g_south_pole as object
+Global g_default_gridpen as pen
+Global g_default_gridinterval_denom as smallint 'see get_grid_interval() for use
+
+Global arrFilePaths() As String
+Global nCAD As Integer
+Global sCadName() As String
+
+Global sErrMsg as string
+Global iErr as integer
+Global gMUTDir as string
+
+Global sColCall As String

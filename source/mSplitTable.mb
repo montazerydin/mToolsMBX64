@@ -1,0 +1,194 @@
+'===============================================================================
+'**
+'**		Author				: Montazery Hasibuan
+'**		Email				: --insert your email here--
+'**
+'**		Filename			: mSplitTable.mb
+'**		Date Created		: 17 Nov 2010
+'**		Last Modified		: --insert the last date you edited this file--
+'**
+
+'===============================================================================
+
+Include "mDeclare.dcl"
+
+'*********************************************************************************************
+Sub SplitTable
+'*********************************************************************************************
+
+Dim sSelTab, sSelCol1, sSelCol2 as String
+Dim gCol1, gCol2 as String
+Dim savepath as String
+Dim sPrefix, sPre as String
+Dim tCol1, tCol2 AS Integer
+Dim j, nCol1, nCol2 as Integer
+Dim spQuery as String
+Dim rVal as Integer
+
+If NumTables() < 1 Then
+Note "Please open a table."
+Exit Sub
+End If
+	
+	Dim pathnote as String
+
+	If Not TableOpen(TableSelect) Then
+		iTableName = 1
+	End If
+	
+		sColCall = "addCol"
+    
+	Call GetTables  
+	Call GetColList
+
+	Dialog
+		Title "Split Tabel using Column"
+		Position 500,125
+			Control StaticText Title "Select Table:" Position 3dW, 1dH
+			Control PopUpMenu Title From Variable sTableList into iTableName ID PopupID Position 3dW, 2.5dH Width 45dW Calling sRedoColList Value iTableName
+			Control StaticText Title "Saves Tables with Column:" Position 3dW, 5dH
+			Control StaticText Title "Column #&1:" ID TextID6 Position 3dW, 6.5dH
+			Control PopUpMenu Title From Variable sColumnList into iSplit1 ID PopupID1 Position 14dW, 6.5dH Width 45dW Value 1 Calling EnableSortDialogPart2
+			Control StaticText Title "Column #&2:" ID TextID7 Position 3dW, 8.5dH Disable
+			Control PopUpMenu Title From Variable sColumnList into iSplit2 ID PopupID2 Position 14dW, 8.5dH Width 45dW Disable
+			Control RadioGroup ID RadioID9 Title "Prefix;Suffix" Position 14dW, 11dH Disable Into rVal Value 0
+			Control EditText ID EditID3 Into sPre Position 23dW, 11.5dH Disable
+			Control CancelButton Title "&Cancel" Position 49dW, 15dH
+			Control OKButton Title "&Split" ID OkID1 Position 38dW, 15dH Disable
+
+' onerror goto nosave	
+	If CommandInfo(CMD_INFO_DLG_OK)
+		Then
+			sSelTab = sTableList(iTableName)
+			sSelCol1 = sColumnList(iSplit1)
+			tCol1 =  columninfo(sSelTab, sSelCol1,col_info_type)
+			nCol1 =  columninfo(sSelTab, sSelCol1,col_info_NUM)
+			pathnote = PathToDirectory$(TableInfo(iTableName, TAB_INFO_TABFILE))
+			do case tCol1
+				case 1,5,6
+					tCol1 = 1
+				case else
+					tCol1 = 0
+			end case
+			spQuery = "Select * From " + sSelTab + " Group By " + sSelCol1
+		If iSplit2 <> 1
+			Then
+				sSelCol2 = sColumnList(iSplit2)
+				tCol2 =  columninfo(sSelTab, sSelCol2,col_info_type)
+				nCol2 =  columninfo(sSelTab, sSelCol2,col_info_NUM)
+				do case tCol2
+					case 1,5,6
+						tCol2 = 1
+					case else
+						tCol2 = 0
+				end case
+				spQuery = spQuery + ", " + sSelCol2
+		End If
+		Else
+		Exit Sub
+	End if
+		
+	Commit Table sSelTab
+	SET TABLE sSelTab fastedit on undo off
+			
+	Run Command spQuery + " into grouptemp"
+				' BROWSE * FROM QR
+		Set Progressbars off	
+	For j=1 to tableinfo("grouptemp",tab_info_nrows)
+	fetch rec(j) from grouptemp
+		If tCol1 = 1 Then
+				gCol1 = STR$(grouptemp.COL(nCol1))
+				Statusbar message ("Processing subset...." + gCol1)
+			If tCol2 = 1 Then	
+				gCol2 = STR$(grouptemp.COL(nCol2))
+				Statusbar message ("Processing subset...." + gCol2)
+			End If
+		End If
+		
+		Dim fQuery as String
+	
+If rVal = 1 Then
+			If sPre <> "" Then
+				sPrefix = sPre & "_"
+			Else
+				sPrefix = ""
+			End If
+			savepath = 	pathnote & sPrefix
+					If tCol1 = 1 then
+						savepath = savepath & gCol1
+						If tCol2 = 1 Then
+							savepath = savepath + "_" & gCol2
+						End if
+					End If
+		ElseIf rVal = 2 Then
+			If sPre <> "" Then
+				sPrefix = "_" & sPre
+			Else
+				sPrefix = ""
+			End If
+			savepath = 	sPrefix
+				If tCol1 = 1 then
+					savepath = gCol1 & savepath
+						If tCol2 = 1 Then
+							savepath = pathnote + gCol1 + "_" + gCol2 + "_" + sPre
+						End if
+				End If
+		End If
+		
+fQuery = "Select * From " + sSelTab + " Where "
+	If tCol1 = 1 THEN
+			fQuery = fQuery & sSelCol1 & "=""" & gCol1 & """"
+		If tCol2 = 1 Then
+			fQuery = fQuery & " And " & sSelCol2 & "=""" & gCol2 & """"
+		End If
+	End If
+	
+		Run Command fQuery & " Into mytemp noselect"
+		Commit Table mytemp as savepath
+		Close Table mytemp
+
+
+	Next
+
+Set Progressbars on
+Close Table grouptemp
+Note "Your new table is save in :" + Chr$(13) + """" + pathnote + """"
+
+End Sub
+
+
+'*********************************************************************************************
+Sub sRedoColList
+'*********************************************************************************************
+  
+  iTableName = ReadControlValue(PopupID)
+  Call GetColList
+  
+	Alter Control PopupID1 Title From Variable sColumnList Value 1
+	Alter Control TextID7 Disable
+	Alter Control PopupID2 Title From Variable sColumnList Disable Value 1
+	Alter Control EditID3 Disable
+	Alter Control OkID1 Disable
+
+End Sub
+
+
+'*********************************************************************************************
+Sub	EnableSortDialogPart2
+'*********************************************************************************************
+
+If ReadControlValue(PopupID1) <> 1 Then
+	Alter Control TextID7 Enable
+	Alter Control PopupID2 Enable
+	Alter Control OkID1 Enable
+	Alter Control RadioID9 Enable Value 1
+	Alter Control EditID3 Enable
+Else
+	Alter Control TextID7 Disable
+	Alter Control PopupID2 Disable Value 1
+	Alter Control OkID1 Disable
+	Alter Control EditID3 Disable
+
+End If
+
+End Sub

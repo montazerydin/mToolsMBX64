@@ -1,0 +1,237 @@
+'===============================================================================
+'**
+'**		Author				: Montazery Hasibuan
+'**		Email				: --insert your email here--
+'**
+'**		Filename			: mSub.mb
+'**		Date Created		: 17 Nov 2010
+'**		Last Modified		: 2014-06-14 10:25 AM
+'**
+
+'===============================================================================
+
+Include "mDeclare.dcl"									'Memanggil file mTools.dcl
+
+'*********************************************************************************************
+Sub GetTables											'Mengambil daftar table TAB yang terbuka di MapInfo
+'*********************************************************************************************
+
+  Dim iNumTables as Integer
+  Dim intBaseTabs As Integer
+  Dim TabName As String
+  Dim iTableCounter as Integer
+  
+  iNumTables = NumTables()
+  intBaseTabs = 0
+  
+  ReDim sTableList(iNumTables)
+  
+  For iTableCounter = 1 to iNumTables
+    If TableInfo(iTableCounter, TAB_INFO_TYPE) = 1 Then
+      TabName = TableInfo(iTableCounter, TAB_INFO_NAME)
+      intBaseTabs = intBaseTabs + 1
+      sTableList(intBaseTabs) = TabName
+    End If
+  Next
+  
+ReDim sTableList(intBaseTabs)
+
+End Sub
+
+
+'*********************************************************************************************
+Sub GetColList											'Mengambil daftar kolom dari suatu tabel TAB
+'*********************************************************************************************
+   
+    Dim iCounter as Integer
+	
+  If iTableName = 0 Then
+    iTableName = 1
+  End If
+  
+    TableSelect = TableInfo(sTableList(iTableName), TAB_INFO_NAME)
+   
+    Do Case sColCall
+      Case "addCol"
+          ReDim sColumnList(numcols(TableSelect)+1)
+          sColumnList(1) = " "
+          For iCounter = 1 to numCols(TableSelect)
+              sColumnList(iCounter +1) = ColumnInfo(TableSelect,"col" & iCounter ,COL_INFO_NAME)
+          Next   
+      Case Else
+          ReDim sColumnList(NumCols(TableSelect))
+          For iCounter = 1 to NumCols(TableSelect)
+              sColumnList(iCounter) = ColumnInfo(TableSelect,"col" & iCounter ,COL_INFO_NAME)
+          Next          
+      End Case
+ End Sub
+
+'*********************************************************************************************
+Sub GetDirectory										'Mengambil daftar directori
+'*********************************************************************************************
+
+Dim sCurDir As String
+Dim STestIfValid,sValidResults As String
+
+sCurDir = FILEBrowseForFolder("Select Folder", GetPreferencePath$(PREFERENCE_PATH_TABLE))
+
+ Alter Control cET Value sCurDir
+
+End Sub
+
+'******************************************************
+'This Sub accepts a String AND replaces with an underscore All Characters
+'that are NOT letters, Numbers OR the underscore
+'******************************************************
+Sub ScoreNonAlpha(sStr As String)
+Dim i,siTmp As SmallInt
+Dim sFrnt,sBck As String
+
+i = Len(sStr)
+Do While i
+   siTmp = Asc(Mid$(sStr,i,1))
+   If (siTmp < 48)
+      OR (siTmp > 57 AND siTmp < 65)
+      OR (siTmp > 90 AND siTmp < 95)
+      OR (siTmp > 95 AND siTmp < 97)
+      OR (siTmp > 122) Then
+
+   sFrnt = Left$(sStr,i-1)
+   sBck = Right$(sStr,Len(sStr)-(i))
+   sStr = sFrnt+"_"+sBck
+   End If
+
+   'decrement the Counter
+   i = i - 1
+Loop
+End Sub
+
+'*********************************************************************************************
+Sub MLBOKButton
+'*********************************************************************************************
+
+Dim hText As String
+Dim iSel, j As Integer
+
+hText = ReadControlValue(9500)
+j = 0
+iSel = ReadControlValue(cLB)
+
+Do Case hText
+	Case "pack"
+		If iSel = 0 Then
+			Note "Please select a Table(s)"
+			Dialog Preserve
+		End If
+	Case "cad"
+		Dim cRGP As Integer
+		Dim cTxt As String
+		Dim ccb1, ccb2 As Logical
+		
+		cTxt = ReadControlValue(cET)
+		cRGP = ReadControlValue(cRG)
+
+			If cRGP = 2 Then
+				If cTxt = "" Then
+				Note "Please select a new directory"
+				Dialog Preserve
+				Exit Sub
+				End If
+			End If  
+	Case "reproj"
+		Dim sss AS String
+		Dim cbdl, cbsl As Logical
+		Dim sfx, sed As String
+    Dim nRg As Integer
+    
+		sss = ReadControlValue(rpEDP)
+		cbdl = ReadControlValue(rpCBD)
+		cbsl = ReadControlValue(rpCBS)
+		sfx = ReadControlValue(rpEDS)
+		sed = ReadControlValue(cET)
+    nRg = ReadControlValue(rpRGO)
+    
+    Do Case nRg
+    Case 2
+			If iSel = 0 Then
+					Note "Please select a Table(s)"
+					Dialog Preserve
+			ElseIf sss = "Please select a new projection" Then
+					Note "You have not select a new projection"
+					Dialog Preserve
+			ElseIf cbdl = 0 Then
+					If cbsl = 0 Or sfx = "" Then
+						Note "Please give a suffix to your new tables name."
+						Dialog Preserve
+					End If
+			ElseIf cbdl = 1 Then
+					If sed = "" Then
+						Note "Please select a new directory"
+						Dialog Preserve
+					End If
+			End If
+      Case Else
+      If iSel = 0 Then
+					Note "Please select a Table(s)"
+					Dialog Preserve
+			ElseIf sss = "Please select a new projection" Then
+					Note "You have not select a new projection"
+					Dialog Preserve
+      End If
+      End Case
+	Case Else
+	End Case
+	
+Do Until iSel = 0
+	j = j + 1
+	Redim iTableSelArray(j)
+	iTableSelArray(j) = iSel
+	iSel = ReadControlValue(cLB)
+Loop
+
+End Sub
+
+'*********************************************************************************************
+
+'* Function: ValueParse - Very powerful AND used a lot
+'* Accepts a String Variable that Contains Data delimited
+'* By a Recurring Character (ie comma, semiColon) AND
+'* returns a String array with the non-Separator Data In it
+'
+'edited on 12/11/2006 3:01PM to allow for null elements at beginning and end
+
+Sub ValueParse(sVals() As String, ByVal sInPut As String,ByVal sSeparator As String)
+'*********************************************************************************************
+
+Dim cnt, Pointer,siNum,i,siCurrPos As SmallInt
+Dim GoOn As Logical
+Dim sTemp As String
+GoOn = TRUE
+sTemp = sInput
+
+'get the number of seperator characters in the input string
+siNum = CountChar(sInput,sSeparator,TRUE)+1
+
+'populate array element with entire input string if it contains no seperator characters
+If siNum = 0 Then
+   ReDim sVals(1)
+   sVals(1) = sInput
+   Exit Sub
+End If
+
+ReDim sVals(siNum)
+siCurrPos = 0
+
+For i = 1 To siNum
+   siCurrPos = InStr(1,sInput,sSeparator)
+   If i = siNum Then
+      sVals(i) = Right$(sInput,Len(sInput)-siCurrPos)
+   Else
+      sVals(i) = Left$(sInput,siCurrPos-1)
+   End If
+   sInput = Right$(sInput, Len(sInput) - siCurrPos)
+Next
+
+End Sub
+
+

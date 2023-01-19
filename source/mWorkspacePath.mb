@@ -1,0 +1,115 @@
+'===============================================================================
+'**
+'**		Author				: Montazery Hasibuan
+'**		Email				: --insert your email here--
+'**
+'**		Filename			: mWorkspacePath.mb
+'**		Date Created		: 17 Nov 2010
+'**		Last Modified		: --insert the last date you edited this file--
+'**
+
+'===============================================================================
+
+Include "mDeclare.dcl"
+
+'*********************************************************************************************
+Sub wToolHandler
+'*********************************************************************************************
+
+If Not WindowInfo(FrontWindow(), WIN_INFO_TYPE) = WIN_LAYOUT Then
+		Note "This is not a layout Window"
+		Run Menu Command M_TOOLS_SELECTOR
+		Exit Sub
+End If
+
+Set CoordSys Layout Units "in"
+
+Dim ListPath, WorPath as String
+Dim LeftPath, RightPath as String
+Dim LeftChar, valChar as String
+Dim sPath As String
+Dim x1, y1 as Float
+Dim sWinVer As String
+
+sWinVer = GetVersion()
+
+Note "Please Save as a Workspace First"
+
+Run Menu Command M_FILE_SAVE_WORKSPACE
+
+x1 = CommandInfo(CMD_INFO_X)
+y1 = CommandInfo(CMD_INFO_Y)
+
+Do Case sWinVer
+	Case "Windows XP"
+		ListPath = GetRegistryString(HKEY_CURRENT_USER, "Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\OpenSaveMRU\wor\MRUList")
+		LeftChar = Left$(ListPath, 1)
+		sPath = GetRegistryString(HKEY_CURRENT_USER, "Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\OpenSaveMRU\wor\"+LeftChar)
+	Case "Windows 7"
+		ListPath = getReg("Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ComDlg32\\OpenSavePidlMRU\wor", "MRUListEx")
+		' Note ListPath
+		LeftChar = Mid$(ListPath, 1, 2)
+		Do Case LeftChar
+			Case "00"
+				valChar = "0"
+			Case "01"
+				valChar = "1"
+			Case "02"
+				valChar = "2"
+			Case "03"
+				valChar = "3"
+			Case "04"
+				valChar = "4"
+			Case "05"
+				valChar = "5"
+			Case "06"
+				valChar = "6"
+			Case "07"
+				valChar = "7"
+			Case "08"
+				valChar = "8"
+			Case "09"
+				valChar = "9"
+			Case "0a"
+				valChar = "10"
+			Case "0b"
+				valChar = "11"
+			Case "0c"
+				valChar = "12"
+			Case "0d"
+				valChar = "13"
+			Case "0e"
+				valChar = "14"
+			Case "0f"
+				valChar = "15"
+			Case "10"
+				valChar = "16"
+			Case "11"
+				valChar = "17"
+			Case "12"
+				valChar = "18"
+			Case "13"
+				valChar = "19"
+			Case Else
+				Note "Something wrong with your Windows version!!!"
+        Exit Sub
+		End Case
+		sPath = worReg("Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ComDlg32\\OpenSavePidlMRU\wor", valChar)
+	Case Else
+		Note "You are using un-supported version of Windows."
+		Exit Sub
+End Case	
+
+			LeftPath = Left$(sPath, 3)
+			RightPath = Mid$(sPath, 4, (Len(sPath)-3))
+			WorPath = LeftPath & "\" & RightPath
+
+			Set Window FrontWindow() Front
+			Create Text
+			Into Window FrontWindow()
+			WorPath
+			(x1,y1) (x1,y1)
+			Font ("Arial",2,8,0)
+			Run Menu Command M_TOOLS_SELECTOR
+
+End Sub

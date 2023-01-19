@@ -1,0 +1,85 @@
+'===============================================================================
+'**
+'**		Author				: Montazery Hasibuan
+'**		Email				: --insert your email here--
+'**
+'**		Filename			: mShortcuts.mb
+'**		Date Created		: 17 Nov 2010
+'**		Last Modified		: --insert the last date you edited this file--
+'**
+
+'===============================================================================
+
+Include "mDeclare.dcl"
+
+'*********************************************************************************************
+Sub mShort
+'*********************************************************************************************
+
+Alter Menu Item 312 Text "In Current &Map Window"
+Alter Menu Item 702 Text "&New Row"
+Alter Menu Item 305 Text "&Find..."
+Alter Menu Item 306 Text "In All &Windows"
+Alter Menu Item 110 Text "R&un MapBasic Program..."
+
+Create Menu "Shortcuts" As
+  "Combine...\tCtrl+G/W^G"
+    HelpMsg "Combine separate map objects into a single object."
+    Calling 1605,
+  "Dissagregate...\tCtrl+B/W^B"
+    HelpMsg "Disaggregate regions into constituant polygons."
+    Calling 1621,
+  "Split...\tCtrl+Q/W^Q"
+    HelpMsg "Break target map object(s) using selected cutter object(s)."
+    Calling 1612,
+  "Erase...\tCtrl+E/W^E"
+    HelpMsg "Erase target map object(s) using selected eraser object(s)."
+    Calling 1613,
+  "Erase Outside...\tCtrl+F/W^F"
+    HelpMsg "Erase area of target object(s) not covered by selected eraser object(s)."
+    Calling 1614,
+  "Polyline Split...\tCtrl+Y/W^Y"
+    HelpMsg "Split target object(s) using one single section polyline cutter object."
+    Calling 1623,
+  "Polyline Split at Node...\tCtrl+A/W^A"
+    HelpMsg "Split single section polyline at selected node."
+    Calling 1626,
+  "(-",
+  "Convert to Regions\tCtrl+H/W^H"
+    HelpMsg "Change each selected object into a region object."
+    Calling 1607,
+  "Convert to Polylines\tCtrl+J/W^J"
+    HelpMsg "Change each selected object into a polyline object."
+    Calling 1604,
+  "(-",
+  "Table Structure...\tCtrl+U/W^U"
+    HelpMsg "Modify the table structure."
+    Calling 404,
+  "(-",
+  "Exit Shortcuts"
+    Calling ExitShort
+    
+  Alter Menu Bar Add "Shortcuts"
+    
+
+End Sub
+
+'*********************************************************************************************
+Sub ExitShort
+'*********************************************************************************************
+
+Alter Menu Item 1605 Text "Combine..."
+Alter Menu Item 1613 Text "Erase..."
+Alter Menu Item 1614 Text "Erase Outside..."
+Alter Menu Item 1626 Text "Polyline Split at Node..."
+Alter Menu Item 404 Text "Table Structure..."
+
+  Alter Menu Item 312 Text "In Current &Map Window\tCtrl+G/W^G"
+  Alter Menu Item 702 Text "&New Row\tCtrl+E/W^E"
+  Alter Menu Item 305 Text "&Find...\tCtrl+F/W^F"
+  Alter Menu Item 306 Text "In All &Windows\tCtrl+A/W^A"
+  Alter Menu Item 110 Text "R&un MapBasic Program...\tCtrl+U/W^U"
+
+Alter Menu Bar Remove "Shortcuts"
+
+End Sub

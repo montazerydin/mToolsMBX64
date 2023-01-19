@@ -1,0 +1,182 @@
+'===============================================================================
+'**
+'**		Author				: Montazery Hasibuan
+'**		Email				: --insert your email here--
+'**
+'**		Filename			: mRegistry.mb
+'**		Date Created		: 17 Nov 2010
+'**		Last Modified		: --insert the last date you edited this file--
+'**
+
+'===============================================================================
+
+Include "mDeclare.dcl"
+
+'*********************************************************************************************
+Function GetRegistryString(ByVal hKey As Integer, ByVal sEntry As String) As String
+'*********************************************************************************************
+
+Dim EntryType, EntryLen,iKey As Integer
+Dim EntryVal,saWords(),sKey,sItem As String
+Dim NumVal As Integer
+
+'parse the 
+If InStr(1,sEntry,"\") Then
+   Call ValueParse(saWords,sEntry,"\")
+   sItem = saWords(UBound(saWords))
+   sEntry = Left$(sEntry,Len(sEntry)-Len(sItem)-1)
+Else
+   sItem = sEntry
+End If
+
+If RegOpenKey(hKey, sEntry, iKey) <> 0 Then
+   Goto HandleError
+Else
+   If RegQueryValueType(iKey, sItem, 0, EntryType, 0, EntryLen) <> 0 Then
+      Goto HandleError
+   End If
+End If
+
+Do Case EntryType
+Case REG_SZ
+   EntryVal = Space$(EntryLen+1)
+   If RegQueryValueEx(iKey, sItem, 0, EntryType, EntryVal, EntryLen) <> 0 Then
+      Goto HandleError
+   End If
+   EntryVal = RTrim$(EntryVal)
+   GetRegistryString = EntryVal
+Case REG_DWORD
+   If RegQueryNumberEx(iKey, sItem, 0, EntryType, NumVal, EntryLen) <> 0 Then
+      Goto HandleError
+   End If
+   GetRegistryString = Str$(NumVal)
+Case Else
+   Goto HandleError
+End Case
+
+Exit Function
+HandleError:
+GetRegistryString = ""
+End Function
+
+
+'*********************************************************************************************
+Function GetRegistryInt(ByVal hKey As Integer, ByVal sEntry As String) As Integer
+'*********************************************************************************************
+
+Dim EntryType, EntryLen, NumVal As Integer
+Dim EntryVal,saWords(),sKey,sItem As String
+Dim iKey As Integer
+
+'parse the 
+If InStr(1,sEntry,"\") Then
+   Call ValueParse(saWords,sEntry,"\")
+   sItem = saWords(UBound(saWords))
+   sEntry = Left$(sEntry,Len(sEntry)-Len(sItem)-1)
+Else
+   sItem = sEntry
+End If
+
+If RegOpenKey(hKey, sEntry, iKey) <> 0 Then
+   Goto HandleError
+Else
+   If RegQueryValueType(iKey, sItem, 0, EntryType, 0, EntryLen) <> 0 Then
+      Goto HandleError
+   End If
+End If
+
+Do Case EntryType
+   Case REG_SZ
+   EntryVal = Str$(EntryLen+1)
+      If RegQueryValueEx(iKey, sItem, 0, EntryType, EntryVal, EntryLen) <> 0 Then
+      Goto HandleError
+   End If
+   EntryVal = RTrim$(EntryVal)
+   GetRegistryInt = Val(EntryVal)
+   Case REG_DWORD
+   If RegQueryNumberEx(iKey, sItem, 0, EntryType, NumVal, EntryLen) <> 0 Then
+      Goto HandleError
+   End If
+   GetRegistryInt = NumVal
+   Case Else
+      Goto HandleError
+End Case
+
+Exit Function
+HandleError:
+GetRegistryInt = ""
+End Function
+
+'*********************************************************************************************
+Sub SetRegistryString(ByVal hKey As Integer, ByVal sEntry As String, ByVal sEntryString As String)
+'*********************************************************************************************
+
+Dim r As Integer
+r = RegSetValueEx(hKey, sEntry, 0, REG_SZ, sEntryString, Len(sEntryString) + 1)
+End Sub
+
+'*********************************************************************************************
+Sub SetRegistryInt(ByVal hKey As Integer, ByVal sEntry As String, ByVal iEntryInt As Integer)
+'*********************************************************************************************
+
+Dim r As Integer
+r = RegSetNumberEx(hKey, sEntry, 0, REG_DWORD, iEntryInt, 4)
+End Sub
+
+'*********************************************************************************************
+'WriteRegistry HKEY_CURRENT_USER, "Software\FinePrint Software\pdfFactory\", "Subject", REG_SZ, sSubject
+Sub WriteRegistryStr(ByVal Group As Integer, ByVal Section As String, ByVal Key As String, ByVal ValType As SmallInt, ByVal sValue As String)
+'*********************************************************************************************
+
+Dim lResult As Integer
+Dim lKeyValue As Integer
+Dim InLen As Integer
+Dim lNewVal As Integer
+Dim sNewVal As String
+
+OnError Goto oops
+lResult = RegCreateKey(Group, Section, lKeyValue)
+
+' Fixes empty string bug - spotted by Marcus Jansson
+sNewVal = sValue
+InLen = Len(sNewVal)
+lResult = RegSetValueEx(lKeyValue, Key, 0, REG_SZ, sNewVal, InLen)
+lResult = RegCloseKey(lKeyValue)
+
+Exit Sub
+oops:
+Resume Next
+End Sub
+
+'*********************************************************************************************
+Sub WriteRegistryInt(ByVal Group As Integer, ByVal Section As String, ByVal Key As String, ByVal ValType As SmallInt, ByVal iValue As Integer)
+'*********************************************************************************************
+
+Dim lResult As Integer
+Dim lKeyValue As Integer
+Dim InLen As Integer
+Dim lNewVal As Integer
+Dim sNewVal As String
+
+OnError goto oops
+lResult = RegCreateKey(Group, Section, lKeyValue)
+
+lNewVal = iValue
+InLen = 4
+lResult = RegSetNumberEx(lKeyValue, Key, 0, REG_DWORD, lNewVal, InLen)
+lResult = RegCloseKey(lKeyValue)
+Exit Sub
+oops:
+Resume Next
+End Sub
+
+'*********************************************************************************************
+Sub DeleteRegKey(ByVal Group As Integer, ByVal Section As String, ByVal Key As String)
+'*********************************************************************************************
+
+Dim intRetVal, hMyKey As Integer
+intRetVal= RegOpenKeyEx(Group, Section, 0, KEY_ALL_ACCESS, hMyKey)
+intRetVal= RegDeleteKey(intRetVal, Key)
+End Sub
+
+

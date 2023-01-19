@@ -1,0 +1,158 @@
+'===============================================================================
+'**
+'**		Author				: Montazery Hasibuan
+'**		Email				: --insert your email here--
+'**
+'**		Filename			: mAutoLabel.mb
+'**		Date Created		: 17 Nov 2010
+'**		Last Modified		: --insert the last date you edited this file--
+'**
+
+'===============================================================================
+
+Include "mDeclare.dcl"
+
+'*********************************************************************************************
+Sub LabelDialog
+'*********************************************************************************************
+
+Dim ErrorNum as Integer
+If Not FrontWindow() Then
+		Note "No Mapper Window is active"
+		Exit Sub
+	Elseif WindowInfo(FrontWindow(), WIN_INFO_TYPE) <> WIN_MAPPER Then
+		Note "Current window is not a Mapper Window"
+		Exit Sub
+	End If
+
+OnError GoTo ErrHandler
+Dim iLabel1, iLabel2, iLabel3 as Integer
+Dim pText1, pText2, pText3 as String	
+Dim lQuery as String	
+	
+		If Not TableOpen(TableSelect) Then
+		iTableName = 1
+		End If
+
+		sColCall = "addCol"
+    
+Call GetTables  
+Call GetColList
+
+
+Dialog
+		Title "Label Plus"
+		Position 500,125
+			Control StaticText Title "Select Table:" Position 3dW, 1dH
+			Control PopUpMenu Title From Variable sTableList into iTableName ID PopUpID3 Position 3dW, 2.5dH Width 30dW Calling lRedoColList Value iTableName
+			Control StaticText Title "Label Layer by Column:" Position 3dW, 5dH
+			Control StaticText Title "Text:" Position 45dW, 5dH
+			Control EditText into pText1 ID EditID Position 45dW, 6.5dH Width 30 Disable
+			Control StaticText Title "Column #&1:" ID TextID4 Position 3dW, 6.5dH
+			Control PopUpMenu Title From Variable sColumnList into iLabel1 ID PopUpID4 Position 14dW, 6.5dH Width 30dW Calling LabelDialogPart2
+			Control EditText into pText2 ID EditID1 Position 45dW, 8.5dH Width 30 Disable
+			Control StaticText Title "Column #&2:" ID TextID5 Position 3dW, 8.5dH Disable
+			Control PopUpMenu Title From Variable sColumnList into iLabel2 ID PopUpID5 Position 14dW, 8.5dH Width 30dW Disable Calling LabelDialogPart3
+			Control EditText into pText3 ID EditID2 Position 45dW, 10.5dH Width 30 Disable
+			Control StaticText Title "Column #&3:" ID TextID8 Position 3dW, 10.5dH Disable
+			Control PopUpMenu Title From Variable sColumnList into iLabel3 ID PopUpID6 Position 14dW, 10.5dH Width 30dW Disable Calling LabelDialogPart4
+			Control CancelButton Title "Cancel" ID CancelID1 calling cancel_handler
+			Control OKButton Title "Label" ID OkID Disable ' Position 50dW, 19dH 
+	
+	
+	If CommandInfo(CMD_INFO_DLG_OK)
+		Then
+			lQuery = "Set Map Window " + FrontWindow() + " Layer " + sTableList(iTableName) + " Label With " + sColumnList(iLabel1)
+			If pText1 <> "" Then
+				lQuery = lQuery + " + "" " + pText1 + """"
+				End If
+			If iLabel2 <> 1 Then
+				lQuery = lQuery + " + Chr$(13) + " + sColumnList(iLabel2)
+				End If
+			If pText2 <> "" Then
+				lQuery = lQuery + " + "" " + pText2 + """"
+				End If
+			If iLabel3 <> 1 Then
+				lQuery = lQuery + " + Chr$(13) + " + sColumnList(iLabel3)
+				End If
+			If pText3 <> "" Then
+				lQuery = lQuery + " + "" " + pText3 + """"
+				End If 
+		Run Command lQuery + " Auto On Overlap On Duplicates On"
+	End If
+
+exitboss:
+Exit Sub
+
+ErrHandler:
+ErrorNum = Err()
+If ErrorNum = 600 Then
+Note "The selected layer is not available in current mapper."
+Else
+Note Error$()
+End If
+Resume exitboss
+End Sub
+
+
+'*********************************************************************************************
+Sub lRedoColList
+'*********************************************************************************************
+  
+  iTableName = ReadControlValue(PopupID3)
+  Call GetColList
+  
+	Alter Control PopUpID4 Title From Variable sColumnList Value 1
+	Alter Control PopUpID5 Title From Variable sColumnList Value 1
+	Alter Control PopUpID6 Title From Variable sColumnList Value 1
+	Call LabelDialogPart2
+	
+End Sub
+
+
+'*********************************************************************************************
+Sub	LabelDialogPart2
+'*********************************************************************************************
+
+If ReadControlValue(PopUpID4) <> 1 Then
+	Alter Control TextID5 Enable
+	Alter Control PopUpID5 Enable
+	Alter Control EditID Enable
+	Alter Control OKID Enable
+Else
+	Alter Control TextID5 Disable
+	Alter Control PopUpID5 Disable Value 1
+	Alter Control EditID Disable Value ""
+	Alter Control OkID Disable
+	Call LabelDialogPart3
+End If
+End Sub
+
+'*********************************************************************************************
+Sub	LabelDialogPart3
+'*********************************************************************************************
+
+If ReadControlValue(PopUpID5) <> 1 Then
+	Alter Control TextID8 Enable
+	Alter Control PopUpID6 Enable
+	Alter Control EditID1 Enable
+Else
+	Alter Control TextID8 Disable
+	Alter Control PopUpID6 Disable Value 1
+	Alter Control EditID1 Disable Value ""
+	Call LabelDialogPart4
+End If
+
+End Sub
+
+'*********************************************************************************************
+Sub	LabelDialogPart4
+'*********************************************************************************************
+
+If ReadControlValue(PopUpID6) <> 1 Then
+	Alter Control EditID2 Enable
+Else
+	Alter Control EditID2 Disable Value ""
+End If
+
+End Sub

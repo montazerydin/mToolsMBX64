@@ -1,0 +1,61 @@
+'===============================================================================
+'**
+'**		Author				: Montazery Hasibuan
+'**		Email				: --insert your email here--
+'**
+'**		Filename			: mQueryCleaner.mb
+'**		Date Created		: 17 Nov 2010
+'**		Last Modified		: --insert the last date you edited this file--
+'**
+
+'===============================================================================
+
+Include "mDeclare.dcl"
+
+'*********************************************************************************************
+Sub QClean 
+'*********************************************************************************************
+
+If NumTables() < 1 Then
+Note "No Table(s) are open."
+Exit Sub
+End If
+			
+		
+NOOT = NumTables() 'Number Of Tables
+
+If NOOT < 1 Then
+Exit Sub
+End If
+
+lpn = 1
+qy = 1
+ 		ProgressBar "Removing Result/Query Tables " ' & Str$(NOOT)
+		  Calling QCleaner Range (NOOT)
+
+' call continue
+End Sub
+
+
+'*********************************************************************************************
+Sub QCleaner
+'*********************************************************************************************
+
+Dim tabname as string
+
+   if tableInfo(lpn,TAB_INFO_TYPE) = 2 then '2 are query result tables
+	tabname = tableInfo(lpn,TAB_INFO_NAME)
+	Close Table tabname
+	NOOT = NOOT - 1
+	else
+	lpn = lpn + 1
+	end if
+	
+	If lpn = (NOOT+1) Then
+    ProgressBar = -1
+  Else
+    ProgressBar = qy
+  End If
+  qy = qy + 1
+
+End Sub

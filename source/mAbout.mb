@@ -1,0 +1,44 @@
+'===============================================================================
+'**
+'**		Author				: Montazery Hasibuan
+'**		Email				: --insert your email here--
+'**
+'**		Filename			: mAbout.mb
+'**		Date Created		: 17 Nov 2010
+'**		Last Modified		: --insert the last date you edited this file--
+'**
+
+'===============================================================================
+
+Include "mDeclare.dcl"
+
+'*********************************************************************************************
+Sub aboutprog
+'*********************************************************************************************
+
+Dim sUser, sEmail As String
+
+sUser           = GetRegistryString(HKEY_LOCAL_MACHINE, "Software\mTools\Username")
+sEmail          = GetRegistryString(HKEY_LOCAL_MACHINE, "Software\mTools\Email")
+
+Dialog
+  Title "About mToolsMBX-2.0.0"
+  Control StaticText Title "mToolsMBX adalah aplikasi yang kuat serta intuitif." Position 3dW, 2dH
+  Control StaticText Title "mToolsMBX menyediakan antarmuka yang jelas dan efisien" Position 3dW, 3dH
+  Control StaticText Title "sehingga pengguna akan dimudahkan untuk mengunakannya." Position 3dW, 4dH
+  Control StaticText Title "mToolsMBX didesain untuk memenuhi kebutuhan pengguna." Position 3dW, 6dH
+  Control StaticText Title "Dalam bekerja menggunakan MapInfo Professional," Position 3dW, 7dH
+  Control StaticText Title "terkadang Kita dihadapi permasalahan yaitu melakukan " Position 3dW, 9dH
+  Control StaticText Title "tugas sederhana namun berulang, mToolsMBX menjadi" Position 3dW, 10dH
+  Control StaticText Title "pilihan tepat untuk mengatasi permasalahan tersebut." Position 3dW, 11dH
+  Control StaticText Title "Contact Author : mtoolsmbx@montazery.com" Position 3dW, 14dH
+  Control StaticText Title "User Information :" Position 3dW, 17dH
+  Control StaticText Title "Username" Position 3dW, 18dH
+  Control StaticText Title ": "+sUser Position 25dW, 18dH
+  Control StaticText Title "Email" Position 3dW, 19dH
+  Control StaticText Title ": "+sEmail Position 25dW, 19dH
+'  Control StaticText Title "Donation Key" Position 3dW, 17dH
+'  Control StaticText Title ": "+sPassword Position 25dW, 17dH
+  Control OKButton
+
+End Sub

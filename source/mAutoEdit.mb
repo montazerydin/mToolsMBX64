@@ -1,0 +1,79 @@
+'===============================================================================
+'**
+'**		Author				: Montazery Hasibuan
+'**		Email				: --insert your email here--
+'**
+'**		Filename			: mAutoEdit.mb
+'**		Date Created		: 17 Nov 2010
+'**		Last Modified		: --insert the last date you edited this file--
+'**
+
+'===============================================================================
+
+Include "mDeclare.dcl"
+
+
+'*********************************************************************************************
+Sub tbHandler
+'*********************************************************************************************
+
+Call SetTbStat (Not tbstat)
+Call SelChangedHandler
+
+End Sub
+
+
+'*********************************************************************************************
+Sub SetTBStat (ByVal stat As Logical)
+'*********************************************************************************************
+
+tbstat = stat
+
+End Sub
+
+
+'*********************************************************************************************
+Sub SelChangedHandler
+'*********************************************************************************************
+
+If tbstat Then 
+	Alter Button tbHandler Check
+		Call LayerEdit
+ Else
+	Alter Button tbHandler Uncheck
+		Exit Sub
+End If
+
+End Sub
+
+
+'*********************************************************************************************
+Sub LayerEdit
+'*********************************************************************************************
+
+OnError GoTo OOPS
+  Dim i As SmallInt
+  If  SelectionInfo(SEL_INFO_NROWS) <  1
+        Then
+        ' Print "Nothing is chosen"
+        Exit Sub
+  End If
+
+  If FrontWindow()
+        Then
+        If WindowInfo(FrontWindow(),WIN_INFO_TYPE) = WIN_MAPPER
+                Then
+        For i = 1 To MapperInfo(FrontWindow(), MAPPER_INFO_LAYERS)
+							If SelectionInfo(SEL_INFO_TABLENAME)=LayerInfo(FrontWindow(), i, LAYER_INFO_NAME)
+											Then
+									Exit for
+
+							End If
+				Next 			
+  End If
+  End If
+Set Map Layer i Editable On
+Exit Sub
+OOPS:
+Print Error$() Resume Next
+End Sub

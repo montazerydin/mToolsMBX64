@@ -1,0 +1,70 @@
+'===============================================================================
+'**
+'**		Author				: Montazery Hasibuan
+'**		Email				: --insert your email here--
+'**
+'**		Filename			: mUpdateText.mb
+'**		Date Created		: 17 Nov 2010
+'**		Last Modified		: --insert the last date you edited this file--
+'**
+
+'===============================================================================
+
+Include "mDeclare.dcl"
+
+'*********************************************************************************************
+Sub upText
+'*********************************************************************************************
+
+If NumTables() < 1 Then
+Note "Please open a table."
+Exit Sub
+End If
+	
+	Dim tTableName As Integer
+	Dim tQuery As String
+
+	If Not TableOpen(TableSelect) Then
+		iTableName = 1
+	End If
+  
+		sColCall = "addCol"
+    
+	Call GetTables  
+	Call GetColList
+
+Dialog
+		Title "Update Column from Text Table"
+		Position 500,125
+			Control StaticText Title "Table to Update:" Position 2dW, 1dH
+			Control PopUpMenu Title From Variable sTableList into iTableName ID uptext1 Position 19dW, 1dH Width 30dW Calling tRedoColList Value iTableName
+			Control StaticText Title "Column to Update:" Position 2dW, 3.5dH
+			Control PopUpMenu Title From Variable sColumnList into tColSel ID uptext2 Position 19dW, 3.5dH Width 30dW Value 1
+			Control StaticText
+				Title "---------------------------------------------------------------------------------------------"
+				Position 2dW, 5.5dH
+			Control StaticText Title "Get text from Table:" Position 2dW, 7dH
+			Control PopUpMenu Title From Variable sTableList ID uptext3 Position 19dW, 7dH Width 30dW Into tTableName
+			Control CancelButton Title "&Cancel"
+			Control OKButton Title "Upda&te" ID uptext4
+			
+			If CommandInfo(CMD_INFO_DLG_OK)
+			Then
+			tQuery = "Add Column " + sTableList(iTableName) + "(" + sColumnList(tColSel) + ") From " + sTableList(tTableName) + " Set To objectinfo(obj,3) Where Intersects"
+			' Print tQuery
+			Run Command tQuery
+			Else
+			Exit Sub
+			End If
+End Sub
+
+'*********************************************************************************************
+Sub tRedoColList
+'*********************************************************************************************
+
+iTableName = ReadControlValue(uptext1)
+
+  
+  Call GetColList
+Alter Control uptext2 Title From Variable sColumnList Value 1
+End Sub

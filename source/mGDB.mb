@@ -1,0 +1,321 @@
+'===============================================================================
+'**
+'**		Author				: Montazery Hasibuan
+'**		Email				: --insert your email here--
+'**
+'**		Filename			: mGDB.mb
+'**		Date Created		: 17 Nov 2010
+'**		Last Modified		: --insert the last date you edited this file--
+'**
+
+'===============================================================================
+
+Include "mDeclare.dcl"
+
+Dim next_row As Integer 
+Dim s_cadED As String
+Dim x As Integer
+
+Dim fin as String
+Dim fpnt as String
+Dim spnt as String
+
+Dim slat as String
+Dim slon as String
+Dim selev as String
+Dim pname as String
+Dim pTime as String
+Dim sTrkTime as String
+Dim tPnt as Integer
+Dim tSeg as Integer
+Dim tTrk as Integer
+Dim iNode as Integer
+
+Dim aSym as Symbol
+Dim aObj as Object
+
+Dim s as String
+Dim mth as String
+Dim sCoord as String
+
+'*********************************************************************************************
+Sub mGDB
+'*********************************************************************************************
+If FileExists("C:\Program Files\GPSBabel\gpsbabel.exe") or FileExists("C:\Program Files (x86)\GPSBabel\gpsbabel.exe") Then
+
+Else
+	Note "You have not download and install GPSBabel, please do so." + Chr$(13) + "Thank You."
+	Exit Sub
+End If
+
+
+DIALOG
+    WIDTH 274 HEIGHT 160
+    TITLE "Import Multiple Garmin GDB Files"
+	CONTROL GroupBox
+      POSITION 4, 3
+      WIDTH 266 HEIGHT 96
+      TITLE "Source File(s):"
+	CONTROL MultiListBox
+      POSITION 8, 15
+      WIDTH 232 HEIGHT 77
+      ID cLB
+	Control StaticText Title "gdb" ID 9500 Position 8, 82 Hide
+  CONTROL Button
+      POSITION 242, 15
+      WIDTH 25 HEIGHT 77
+      ID cBT
+      TITLE "->"
+      CALLING gdbFileDlg
+  CONTROL GroupBox
+      POSITION 4, 103
+      WIDTH 266 HEIGHT 30
+      TITLE "Table Target Directory"
+	CONTROL EditText
+      POSITION 8, 115
+      WIDTH 232 HEIGHT 12
+      ID cET
+      INTO s_cadED
+      Disable
+	CONTROL Button
+      POSITION 242, 114
+      WIDTH 25 HEIGHT 14
+      ID cdBT
+      TITLE "..."
+      CALLING GetDirectory	
+      Disable
+  CONTROL OKButton
+      POSITION 187, 138
+      WIDTH 38 HEIGHT 14
+      ID cOK
+      CALLING MLBOKButton
+      Disable
+  CONTROL CancelButton
+      POSITION 228, 138
+      WIDTH 38 HEIGHT 14
+
+If CommandInfo(CMD_INFO_DLG_OK) Then
+    next_row = Ubound(iTableSelArray)
+		x = 1
+    ProgressBar "Converting Garmin GDB..." Calling gdbOut Range next_row
+			If CommandInfo(CMD_INFO_STATUS) Then 
+				Note "Operation complete! Thanks for waiting." 
+			Else
+				Note "Operation interrupted!" 
+			End If
+End If
+End Sub
+
+'*********************************************************************************************
+Sub gdbFileDlg
+'*********************************************************************************************
+Dim sFileTypes, sFilePath As String
+Dim nNumFiles, i, m As Integer
+
+OnError GoTo ErrorOccured
+
+sFileTypes = "Garmin GDB (*.gdb)|*.gdb"
+
+nNumFiles = FILEOpenFilesDlg("Select Garmin GDB files to Import", "", sFileTypes)
+If nNumFiles = 0 Then
+Exit Sub
+End If
+
+ReDim arrFilePaths(nNumFiles)
+If FILEGetOpenFilesDlgFileNames(arrFilePaths) = 0 Then
+Exit Sub
+End If
+ReDim sCadName(nNumFiles)
+For m = 1 to nNumFiles
+sCadName(m) = PathToFileName$(arrFilePaths(m))
+Next
+Alter Control cLB Title From Variable sCadName
+For nCAD = 1 to Ubound(arrFilePaths)
+Alter Control cLB Value nCAD
+Next
+
+Alter Control cdBT Enable
+Alter Control cOK Enable
+
+Exit Sub
+'-------------------------
+ErrorOccured:
+Note Err() & " " & Error$()
+End Sub
+
+'*********************************************************************************************
+Sub gdbOut
+'*********************************************************************************************
+
+Dim start_time As Float 
+  
+Dim k As Integer
+Dim cExt, cName, cNameTr, cLayerName As String
+Dim cPath, cPath2 As String
+
+Dim gdb2gpx, gpx2tab As String
+
+Dim cQry, cQry2 As String
+
+Dim CreateDir, DirName As String
+
+Dim tSecurity as SECURITY_ATTRIBUTES
+Dim nStatus as Integer
+tSecurity.nLength = 24 'Size of this structure in bytes, but you
+'can get away with using 0 in place of the
+'tSecurity parameter as Win3.1 and Win95
+'seem to ignore it anyway.
+
+	start_time = Timer( )
+	
+	mth="JANFEBMARAPRMAYJUNJULAUGSEPOCTNOVDEC"
+  Set Style Symbol MakeSymbol(33,rgb(0,0,255),8)
+  set style pen makepen(2,2,rgb(0,255,0))
+
+  inode=512
+  sCoord="Earth Projection 1, 104"
+
+	If FileExists("C:\Program Files\GPSBabel\gpsbabel.exe") Then
+    cQry = "C:\Program Files\GPSBabel\gpsbabel.exe -w -r -t -i gdb,via=0,roadbook=0 -f "
+    Else
+    cQry = "C:\Program Files (x86)\GPSBabel\gpsbabel.exe -w -r -t -i gdb,via=0,roadbook=0 -f "
+    End If
+
+    cQry2 = " -o gpx,suppresswhite=0,logpoint=0,humminbirdextensions=0,garminextensions=0 -F "
+
+Do While x <= next_row And Timer() - start_time < 2
+
+        cPath = PathToDirectory$(arrFilePaths(x))
+        cPath2 = Mid$(cPath, 1, Len(cPath)-1)
+        cExt = Right$(sCadName(x), 3)
+        cName = Mid$(sCadName(x), 1, Len(sCadName(x))-4)
+        cNameTr = Trim(cName)
+        Call ScoreNonAlpha(cNameTr)
+				
+				gdb2gpx = cQry + """" + TrueFileName$(arrFilePaths(x)) + """" + cQry2 + """" + cPath + cName + ".gpx" + """"
+					If ExecuteAndWait(gdb2gpx) = TRUE then
+          Else
+						Print "Execute & Wait failed during Actual Translation"
+					End if
+				' Run Program gdb2gpx
+				fin = cNameTr
+				If s_cadED = "" Then
+				fpnt = cPath + cName + ".TAB"
+				Else
+				fpnt = s_cadED + "\" + cName + ".TAB"
+				End If
+				sPnt = cPath + cName + ".gpx"
+
+				create table fin (Name Char(50),
+                   DateTime Char(50), 
+                   LatY Decimal(12,6),
+                   LonX Decimal(12,6), 
+                   Elev Decimal(7,2)) 
+             File fpnt Type Native
+							s="Create Map for "+fin+" CoordSys "+ sCoord
+							Run command s
+							Close Table fin
+						
+						Open Table fPnt As fin
+						
+						print chr$(12)
+
+open file sPnt for input as #1
+
+tPnt=0
+tSeg=0
+tTrk=0
+sTrkTime=""
+
+while not eof(1)
+  Line input #1,s
+  if left$(LTrim$(s),4)="<wpt" then
+    s=mid$(s,instr(1,s,chr$(34))+1,100) 'get past first " to get LAT
+    slat=left$(s,instr(1,s,chr$(34))-1) 'get LAT
+    s=mid$(s,instr(1,s,chr$(34))+1,100) 'remove ending " from LAT
+    s=mid$(s,instr(1,s,chr$(34))+1,100) 'get past start " for LON
+    slon=mid$(s,1,instr(1,s,chr$(34))-1)  'get LON
+    While not eof(1)
+      Line input #1,s      
+'      if left$(LTrim$(s),6)="<time>" then
+'        s=mid$(LTrim$(s),7,100)
+'        pTime=mid$(s,1,instr(1,s,"<")-1)
+'      end if
+      if left$(LTrim$(s),5)="<ele>" then
+        s=mid$(LTrim$(s),6,100)
+        selev=mid$(s,1,instr(1,s,"<")-1)
+      end if
+      if left$(LTrim$(s),6)="<name>" then
+        s=mid$(LTrim$(s),7,100)
+        pName=mid$(s,1,instr(1,s,"<")-1)
+      end if
+      if left$(LTrim$(s),5)="<cmt>" then
+        s=mid$(LTrim$(s),6,len(s))
+        pTime=left$(s,instr(1,s,"<")-1)
+      end if
+      if left$(LTrim$(s),6)="</wpt>" then
+        tPnt=tPnt+1
+        aObj=CreatePoint(val(slon),val(slat))
+				insert into fin (Name,LatY,LonX,Elev,DateTime,obj) values (pName,val(sLat),val(sLon),val(selev),pTime,aObj) 
+        goto Cont
+      end if
+    wend
+  end if
+	if left$(LTrim$(s),5) = "<trk>" Then
+	sTrkTime=""
+  iNode=0
+	End If
+	if left$(LTrim$(s),6)="<name>" then
+        s=mid$(LTrim$(s),7,100)
+        pName=mid$(s,1,instr(1,s,"<")-1)
+      end if
+  if left$(LTrim$(s),8)="<trkseg>" then
+    Create PLine into Variable aObj 0
+  end if
+  if left$(LTrim$(s),6)="<trkpt" then
+    s=mid$(s,instr(1,s,chr$(34))+1,100) 'get past first " to get LAT
+    slat=left$(s,instr(1,s,chr$(34))-1) 'get LAT
+    s=mid$(s,instr(1,s,chr$(34))+1,100) 'remove ending " from LAT
+    s=mid$(s,instr(1,s,chr$(34))+1,100) 'get past start " for LON
+    slon=mid$(s,1,instr(1,s,chr$(34))-1)  'get LON
+    iNode=iNode+1
+    Alter Object aObj Node Add Position 1,iNode (val(sLon),val(sLat))
+    tTrk=tTrk+1
+  end if
+  if sTrkTime="" and left$(s,6)="<time>" then
+    s=mid$(s,7,100)
+    sTrkTime=left$(s,instr(1,s,"<")-1)
+  end if
+  if left$(LTrim$(s),9)="</trkseg>" then
+    if objectinfo(aObj,20)>4 and objectlen(aObj,"ft")>500 then 'Obj_Info_Npnts=20 ==== must have >4 to be valid [ie standing still deviations] and the length need to be >500ft
+      tSeg=tSeg+1
+      insert into fin (Name,DateTime,obj) values (pName,sTrkTime,aObj) 
+    end if
+    goto Cont
+  end if
+  
+Cont:
+wend
+
+Close file #1
+	
+Commit Table fin
+
+if NumWindows() > 0 then
+  if WindowInfo(FrontWindow(), WIN_INFO_TYPE) = WIN_MAPPER then
+    Add Map Window FrontWindow() AUTO LAYER fin
+  end if
+else
+  Map From fin ', GpsTrk
+end if
+	
+	x = x + 1 
+Loop
+  
+    If x > next_row Then
+		ProgressBar = -1 	'tell caller "All Done!" 
+	Else
+		ProgressBar = x 	'tell caller "Partly done"
+	End If 
+  
+End Sub

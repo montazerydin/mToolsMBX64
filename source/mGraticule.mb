@@ -1,0 +1,2168 @@
+'===============================================================================
+'**
+'**		Author				: Montazery Hasibuan
+'**		Email				: --insert your email here--
+'**
+'**		Filename			: mGraticule.mb
+'**		Date Created		: 17 Nov 2010
+'**		Last Modified		: --insert the last date you edited this file--
+'**
+
+'===============================================================================
+
+Include "mDeclare.dcl"
+
+
+dim g_active_debug_level as integer
+
+'*********************************************************************************************
+Sub grtbHandler
+'*********************************************************************************************
+
+Call grTbStat (Not gtbstat)
+
+End Sub
+
+
+'*********************************************************************************************
+Sub grTBStat (ByVal stat As Logical)
+'*********************************************************************************************
+
+gtbstat = stat
+
+If gtbstat Then 
+	Alter Button grtbHandler Check
+	Alter Menu "mToolsMBX" Remove "Graticule"
+	Alter Menu "mToolsMBX" Remove tbHandler
+	Alter Menu "mToolsMBX" Remove MnuHelp
+	Alter Menu "mToolsMBX" Remove aboutprog
+	Alter Menu "mToolsMBX" Remove bye 
+
+	Alter Menu "mToolsMBX" Add "Graticule"	As "Graticule"
+	Alter Menu "mToolsMBX" Add "Auto Layer Editable" Calling tbHandler
+	Alter Menu "mToolsMBX" Add "(-"
+	Alter Menu "mToolsMBX" Add "Help" Calling MnuHelp
+	Alter Menu "mToolsMBX" Add "About mTools" Calling aboutprog
+	Alter Menu "mToolsMBX" Add "Exit" Calling bye   
+
+	Call maingrat
+ Else
+	Alter Button grtbHandler Uncheck
+	Alter Menu "mToolsMBX" Remove "Graticule"
+	Alter Menu "mToolsMBX" Remove tbHandler
+	Alter Menu "mToolsMBX" Remove MnuHelp
+    Alter Menu "mToolsMBX" Remove aboutprog
+    Alter Menu "mToolsMBX" Remove bye 
+
+	Alter Menu "mToolsMBX" Add "(Graticule"	As "Graticule"
+	Alter Menu "mToolsMBX" Add "Auto Layer Editable" Calling tbHandler	
+	Alter Menu "mToolsMBX" Add "(-"
+	Alter Menu "mToolsMBX" Add "Help" Calling MnuHelp
+	Alter Menu "mToolsMBX" Add "About mTools" Calling aboutprog
+	Alter Menu "mToolsMBX" Add "Exit" Calling bye   
+	
+	Alter Menu "MapperShortcut" Remove ID 101
+	Alter Menu "MapperShortcut" Remove ID 102
+	Alter Menu "MapperShortcut" Remove ID MFish_menu_LocalGraticuleOptions
+	Exit Sub
+End If
+
+End Sub
+
+'*********************************************************************************************
+sub maingrat
+'*********************************************************************************************
+dim gridded_window_id as integer
+
+g_active_debug_level = 0
+
+Alter menu "MapperShortcut" Add
+	"(-",
+	"Add Graticule" ID 101 Calling add_graticule_handler,
+	"Remove Graticule" ID 102 Calling remove_graticule_handler,
+	"Graticule Options" ID MFish_menu_LocalGraticuleOptions Calling local_graticule_options_menuhandler
+
+Alter menu item M_MAP_OPTIONS
+	calling graticule_M_MAP_OPTIONS_handler enable
+Alter menu item graticule_M_MAP_OPTIONS_handler enable
+
+Menu Bar Show
+	
+Create Pline 
+	into variable g_central_meridian
+	3
+	(180, 90) (180, 0) (180, -90)
+Create Pline
+	into variable g_equator
+	4
+	(0,0) (180, 0) (-180, 0) (0,0)
+Create Point 
+	into variable g_north_pole
+	(0, 90)
+Create Point 
+	into variable g_south_pole
+	(0, -90)
+
+g_default_gridpen = MakePen(1,2,12632256)
+g_default_gridinterval_denom = 4
+
+end sub 'main
+'**********
+sub graticule_debug(byval debug_level as integer, byval debug_message as string)
+dim output_string as string
+
+output_string = "grat: " + string$(debug_level-1, " ") + debug_message
+call debug(debug_level, output_string , g_active_debug_level)
+
+end sub
+'**********
+sub graticule_M_MAP_OPTIONS_handler
+
+	Run menu command M_MAP_OPTIONS
+	call WinChangedHandler
+
+end sub
+'**********
+sub global_options_menu_handler
+
+end sub 'options_menu_handler
+'**********
+sub local_graticule_options_menuhandler
+'Put up a dialog for the user to change the options (pen and grid-spacing) on the current
+'graticule
+dim frontwindow_id, index_no as integer
+dim tempstatus as logical
+
+frontwindow_id = FrontWindow()
+if frontwindow_id <> 0 then
+	If WindowInfo(frontwindow_id, WIN_INFO_TYPE) = WIN_MAPPER then 'window is a mapper - carry on
+		index_no = get_graticule_index(frontwindow_id) 
+		if index_no <> 0 then 'there is a graticule for this mapper
+			tempstatus = local_graticule_options_dialog(index_no)
+			if tempstatus = k_local_options_changeOK then
+				'options changed - redraw the grid
+				call draw_graticule(index_no)
+				
+				'set the new options as global default
+				g_default_gridinterval_denom = g_graticule_index(index_no).gridinterval_denom 
+				g_default_gridpen = g_graticule_index(index_no).gridpen 
+
+			end if
+		end if
+	end if
+end if
+
+end sub 'local_graticule_options_menuhandler
+'**********
+function local_graticule_options_dialog(byval index_no as integer) as smallint
+dim old_space_denom, new_space_denom as smallint
+dim new_gridpen, old_gridpen as pen
+dim s_noof_gridlines as string
+dim options_status as smallint
+
+old_space_denom = g_graticule_index(index_no).gridinterval_denom 
+old_gridpen = g_graticule_index(index_no).gridpen 
+
+dialog
+	Title "Graticule Options"
+	Control StaticText
+		Position 10, 10
+		Title "Minimum number of gridlines"
+	Control EditText
+		Position 101, 9
+		Width 20
+		ID noof_gridlines_ID
+		Value str$(old_space_denom-2)
+		into s_noof_gridlines
+	
+	Control StaticText
+		Position 10, 34
+		Title "Grid pen"
+	Control PenPicker
+		Position 45, 30
+		Value old_gridpen
+		into new_gridpen
+	
+	Control OKButton
+		calling GridOptions_OKButton_Handler
+		Position 15, 60
+	Control CancelButton
+		Position 65, 60
+		
+If CommandInfo(CMD_INFO_DLG_OK) = True then
+	'user pressed OK
+	new_space_denom = val(s_noof_gridlines)+2
+	if (new_space_denom <> old_space_denom) or (str$(new_gridpen) <> str$(old_gridpen)) then
+		'changes made: update the index
+		g_graticule_index(index_no).gridinterval_denom = new_space_denom
+		g_graticule_index(index_no).gridpen = new_gridpen
+		
+		options_status = k_local_options_changeOK		
+	else
+		'no changes made
+		options_status = k_local_options_nochange		
+	end if
+else
+	'user pressed cancel
+	options_status = k_local_options_nochange		
+end if
+
+finish:
+local_graticule_options_dialog = options_status 
+exit function
+
+general_error:
+print "Error #" + err() + " while editing graticule options. Message """ + error$() + """"
+options_status = k_local_options_error
+resume finish
+
+end function 'local_graticule_options_dialog
+'**********
+sub GridOptions_OKButton_Handler
+dim s_curr_noof_gridlines as string
+dim i_curr_noof_gridlines as integer
+
+s_curr_noof_gridlines = ReadControlValue(noof_gridlines_ID)
+
+i_curr_noof_gridlines = val(s_curr_noof_gridlines )
+if (i_curr_noof_gridlines  < 1) or (i_curr_noof_gridlines > 100) then
+	Note "Please select a number of gridlines between 1 and 100"
+	Dialog Preserve
+end if
+
+end sub 'GridOptions_OKButton_Handler
+'**********
+sub add_graticule_handler
+'called by the menu item, adds a graticule to the front window.
+dim index_no as integer
+dim frontwindow_id as integer
+dim b_status as logical
+'dim coordsys_string as string
+
+frontwindow_id = Frontwindow()
+if frontwindow_id <> 0 then
+	If WindowInfo(frontwindow_id, WIN_INFO_TYPE) = WIN_MAPPER then 'window is a mapper - carry on
+		if get_graticule_index(frontwindow_id) = 0 then 'no graticule for this mapper - add it.	
+			'get a free index-number
+			index_no = get_graticule_index(0) 'returns first unused graticule-slot
+			If index_no <> 0 then 'there is a free slot: slot number "index_no"
+				b_status = add_new_graticule_layer(frontwindow_id, index_no)
+				
+				If b_status = True then
+					call update_graticule_coordsys(index_no)
+					call draw_graticule(index_no)
+				else
+					print "Add Graticule failed."
+				end if
+			else 'there is no free slot
+				'no free slots
+				Note "Sorry - can only have " + str$(MAX_NOOF_GRATICULES) + " maps with graticules."
+			end if
+		else
+			'this mapper already has a graticule - do nothing
+		end if	
+	end if
+end if
+
+end sub 'add_graticule_handler
+'*******
+function add_new_graticule_layer(target_window as integer, index_no as integer) as logical
+'add a new graticule layer, at graticule-index "index_no", to window number "target_window"
+'Return True if successful, False if an error occurs.
+dim gridtablename as string
+dim grid_table_path as string
+dim add_graticule_handler_err$ as string
+				
+'print "adding new graticule..."
+set handler WinChangedHandler Off
+				g_graticule_index(index_no).map_win_id = target_window
+				
+				'need to store coordsys and units strings so we can tell if 
+				'it changes, and whether we need to recalculate
+				'call update_graticule_coordsys(index_no)
+				'call update_graticule_bounds(index_no)
+				
+				'create the table, in the coordsys of the window to maximise drawing speed
+				gridtablename = "autogrid" + str$(index_no)
+				g_graticule_index(index_no).tablename = gridtablename
+				grid_table_path = get_temporary_tablename()
+				OnError Goto err_create_table
+				Create Table gridtablename
+					(name char(30))
+					File grid_table_path
+				Create map for gridtablename coordsys window target_window
+				OnError Goto 0
+				Set table gridtablename 
+					fastedit on 
+					undo off 
+					UserRemoveMap Off 
+					UserClose Off
+				Add map 
+					Window target_window 
+					layer gridtablename
+				Set Map
+					Window target_window 
+					Layer gridtablename
+				    Label Line None Position Above Right Font ("Arial",256,7,0) Pen (1,2,0) 
+				      With name
+				      Parallel On Auto Off Overlap On Duplicates On Offset 0
+				      Visibility On
+				
+				g_graticule_index(index_no).gridinterval_denom = g_default_gridinterval_denom 
+				g_graticule_index(index_no).gridpen = g_default_gridpen 
+				
+				add_new_graticule_layer = True
+
+finish_add_new_graticule:
+set handler WinChangedHandler On
+exit sub 
+
+'error handlers
+err_create_table:
+'error while creating table - abort
+add_graticule_handler_err$ = "Error #" + Err() + " while creating autogrid table: " + error$()
+Print add_graticule_handler_err$
+Note add_graticule_handler_err$
+add_new_graticule_layer = False
+Resume finish_add_new_graticule
+
+end function 'add_new_graticule_layer
+'*******
+sub update_graticule_bounds(index_no as integer)
+'update the given graticule bounds info, stored in the graticule index
+'Should be called every time the graticule is drawn/redrawn (called by draw_graticule)
+dim tempobj as object
+
+dim target_window as integer
+
+target_window = g_graticule_index(index_no).map_win_id
+call set_coordsys_GraticuleCoordsys(index_no)
+
+'store window bounds in graticule coordsys (for use when building the grid)
+g_graticule_index(index_no).win_minx = MapperInfo(target_window, MAPPER_INFO_MINX)
+g_graticule_index(index_no).win_miny = MapperInfo(target_window, MAPPER_INFO_MINY)
+g_graticule_index(index_no).win_maxx = MapperInfo(target_window, MAPPER_INFO_MAXX)
+g_graticule_index(index_no).win_maxy = MapperInfo(target_window, MAPPER_INFO_MAXY)
+
+'store window bounds in "native" window coordsys (for use when comparing warped
+'graticule against window.) The window coordsys may be different to the graticule coordsys, 
+'e.g. if the user wants to display a lat-long grid over a NZMG projection
+Set Coordsys Window g_graticule_index(index_no).map_win_id
+Create Rect 
+	into variable g_graticule_index(index_no).mapper_bounds_obj 
+	(MapperInfo(g_graticule_index(index_no).map_win_id, MAPPER_INFO_MINX), MapperInfo(g_graticule_index(index_no).map_win_id, MAPPER_INFO_MINY)) (MapperInfo(g_graticule_index(index_no).map_win_id, MAPPER_INFO_MAXX), MapperInfo(g_graticule_index(index_no).map_win_id, MAPPER_INFO_MAXY))
+
+
+'test code: save a lat-long version of the mapper window
+'doesn't work.
+'Set Coordsys Earth
+'Create Rect 
+'	into variable g_graticule_index(index_no).mapper_bounds_obj_latlong
+'	(ObjectGeography(g_graticule_index(index_no).mapper_bounds_obj, OBJ_GEO_MINX), ObjectGeography (g_graticule_index(index_no).mapper_bounds_obj, OBJ_GEO_MINY)) 
+'	(ObjectGeography(g_graticule_index(index_no).mapper_bounds_obj, OBJ_GEO_MAXX), ObjectGeography(g_graticule_index(index_no).mapper_bounds_obj, OBJ_GEO_MAXY))
+'call set_coordsys_GraticuleCoordsys(index_no)
+'g_graticule_index(index_no).mapper_bounds_obj = tempobj
+
+end sub 'update_graticule_bounds
+'******
+sub set_coordsys_GraticuleCoordsys(index_no as integer)
+dim set_coordsys_command as string
+
+set_coordsys_command = "set " + g_graticule_index(index_no).coordsys_string
+Run command set_coordsys_command
+
+end sub
+'******
+sub remove_graticule_handler
+dim front_graticule_index as integer
+
+front_graticule_index = get_graticule_index(frontwindow())
+If front_graticule_index <> 0 then
+	call remove_graticule(front_graticule_index)
+end if
+end sub
+'********
+' sub exit_graticule_handler
+' end program
+' end sub
+'*******
+sub EndHandler
+dim index_no as integer
+for index_no = 1 to MAX_NOOF_GRATICULES 
+	call remove_graticule(index_no)
+next
+
+Alter menu item graticule_M_MAP_OPTIONS_handler
+	calling M_MAP_OPTIONS
+
+end sub 'EndHandler
+'********
+' sub about_graticule_handler
+' dim about_text, about_line as string
+
+' onError goto error_opening_aboutfile
+' Open file "about graticule.txt" for INPUT access READ as #1
+' onerror goto 0
+' line input #1, about_line
+' do while not eof(1)
+	' about_text = about_text + chr$(13) + about_line
+	' line input #1, about_line
+' loop
+' close file #1
+
+' show_dialog:
+' Dialog  
+	' Title "About Graticule v1.1"
+	' Width 350 Height 250
+		
+	' Control EditText
+		' Position 16 , 20 
+		' Width 320 Height 180  
+		' Value about_text
+	' control OKButton
+		' Position 100, 230
+		' Title "OK"
+
+' finish:
+' exit sub
+
+' error_opening_aboutfile:
+' about_text = "Error: unable to find file ""about graticule.txt"". Please make sure this file is in the same directory as the mbx."
+' resume show_dialog
+		
+' end sub 'about_graticule_handler
+'*******
+sub WinClosedHandler
+dim win_id as integer
+dim index_no as integer
+
+win_id = CommandInfo( CMD_INFO_WIN )
+If windowInfo(win_id, WIN_INFO_TYPE) = WIN_MAPPER then
+	'a mapper was closed - look to see if it had a graticule
+	index_no = get_graticule_index(win_id)
+	If index_no > 0 then
+		'the window had a graticule - remove it from the index
+		call remove_graticule(index_no)
+	end if	
+end if
+
+end sub 'WinClosedHandler
+'*******
+sub remove_graticule(index_no as integer)
+'drop the graticule table, and remove the graticule from the graticule-index
+dim remove_graticule_err$ as string
+
+set handler WinChangedHandler Off
+
+If g_graticule_index(index_no).map_win_id <> 0 then
+	'set the window-identifier to zero, unlinking the graticule from the window
+	g_graticule_index(index_no).map_win_id = 0
+end if
+If g_graticule_index(index_no).tablename <> "" then
+	'drop the table
+	If tableavailable(g_graticule_index(index_no).tablename) then
+		OnError goto error_dropping_table
+		drop table g_graticule_index(index_no).tablename
+		OnError goto 0
+	End if
+	g_graticule_index(index_no).tablename = ""
+end if
+set handler WinChangedHandler On
+exit sub
+ 
+'error handlers
+error_dropping_table:
+remove_graticule_err$ = "Error #" + Err() + " while dropping table: " + Error$()
+print remove_graticule_err$
+note remove_graticule_err$
+resume next
+
+end sub 'remove_graticule
+'*****
+function get_graticule_index(byval mapwinid as integer) as integer
+'returns the graticule index for the given window_id. If no graticule for the window return zero.
+dim temp_index_no as integer
+
+temp_index_no = 1
+do while g_graticule_index(temp_index_no).map_win_id <> mapwinid and temp_index_no < MAX_NOOF_GRATICULES
+	temp_index_no = temp_index_no + 1
+loop
+If g_graticule_index(temp_index_no).map_win_id <> mapwinid then
+	'there is no index for the given mapwinid
+	get_graticule_index = 0
+else
+	'found it
+	get_graticule_index = temp_index_no
+end if
+end function
+'**********
+sub check_graticule_coordsys(target_graticule as integer)
+'Work out what coordsys the graticule should be in, and save the info in the graticule_index.
+'Note, the graticule coordsys may be different to the coordsys of the graticule-table, which 
+'is always in the coordsys of the window. 
+'Whether the graticule lines will be straight or some sort of curve depends on
+'firstly the grid, and second the projection. There may be some assumptions in here, but if
+'the grid unit is not lat-long e.g. metres, assume it will be straight. Otherwise, for lat-long
+' units, curvature depends on the projection-type, e.g. mercator, conic, etc.
+'Called immediately before update_bounds. Could be part of that.
+
+dim user_xyunits, mapper_coordsys_units as string
+
+user_xyunits = MapperInfo(g_graticule_index(target_graticule).map_win_id, MAPPER_INFO_XYUNITS)
+If user_xyunits <> g_graticule_index(target_graticule).gridunits then
+	'user has changed the grid units. Update the information in the index.
+	call update_graticule_coordsys(target_graticule)
+end if
+
+end sub 'check_graticule_coordsys
+'********
+sub update_graticule_coordsys(target_graticule as integer)
+dim mapper_coordsys as string
+dim update_graticule_coordsys_error$ as string
+dim user_xyunits, mapper_coordsys_units as string
+
+user_xyunits = MapperInfo(g_graticule_index(target_graticule).map_win_id, MAPPER_INFO_XYUNITS)
+mapper_coordsys = MapperInfo(g_graticule_index(target_graticule).map_win_id, MAPPER_INFO_COORDSYS_CLAUSE)
+mapper_coordsys_units = get_coordsys_gridunits(mapper_coordsys)
+
+g_graticule_index(target_graticule).gridunits = user_xyunits 
+g_graticule_index(target_graticule).projection = get_coordsys_projection(mapper_coordsys)
+'print "projection " + g_graticule_index(target_graticule).projection 
+
+If (user_xyunits = "degree") and (mapper_coordsys_units <> "degree") then
+	'we are displaying degree lines in a non-degree system. Create the grid lines in the 
+	'standard MI lat-long system, and project them into the mapper coordsys
+	g_graticule_index(target_graticule).coordsys_string = "CoordSys Earth Projection 1, 0"
+else
+	'make the grid coordsys the same as the mapper coordsys
+	g_graticule_index(target_graticule).coordsys_string = mapper_coordsys
+end if
+
+end sub 'update_graticule_coordsys
+'**********
+sub WinChangedHandler
+dim mapwinid as integer
+'dim new_minx, new_miny, new_maxx, new_maxy as float
+dim xsiz as float
+dim ysiz as float
+dim grid_interval as float
+dim add_x, add_y as float
+dim tempobj as object
+dim graticule_index as integer
+dim current_coordsys as string
+dim b_status as logical
+dim local_debug_level as integer
+
+local_debug_level = 1
+
+call graticule_debug(local_debug_level, " ")
+call graticule_debug(local_debug_level, "in winchanged handler")
+
+mapwinid = CommandInfo(CMD_INFO_WIN) 'find out what window was updated
+graticule_index = get_graticule_index(mapwinid) 'find out if that window has a graticule
+call graticule_debug(local_debug_level+1, "window " + mapwinid + "; graticule " + graticule_index)
+If graticule_index > 0 and WindowInfo(mapwinid, WIN_INFO_STATE) = WIN_STATE_NORMAL THEN
+	If MapperInfo(mapwinid, MAPPER_INFO_MINX) <> g_graticule_index(graticule_index).win_minx or 
+	   MapperInfo(mapwinid, MAPPER_INFO_MINY) <> g_graticule_index(graticule_index).win_miny or 
+	   MapperInfo(mapwinid, MAPPER_INFO_MAXX) <> g_graticule_index(graticule_index).win_maxx or 
+	   MapperInfo(mapwinid, MAPPER_INFO_MAXY) <> g_graticule_index(graticule_index).win_maxy or
+	   MapperInfo(mapwinid, MAPPER_INFO_XYUNITS) <> g_graticule_index(graticule_index).gridunits then
+	   'MapperInfo(mapwinid, MAPPER_INFO_COORDSYS_NAME) <> tableinfo(g_graticule_index(graticule_index).tablename, TAB_INFO_COORDSYS_NAME) then
+		'window has zoomed or panned, units have changed, or projection has changed - call update
+		call graticule_debug(local_debug_level+2, "window has changed - updating graticule...")
+
+		'redraw the window first, as window coordinates often change slightly after the redraw
+		'presumably as various grids align, reprojections, etc, thereby triggering another
+		'call to winchangedhandler
+		set handler WinChangedHandler Off
+		Run Menu Command M_WINDOW_REDRAW
+		set handler WinChangedHandler On
+		
+		'make sure grid coordsys and units haven't changed. Compare coordsys name, as the 
+		'coordsys clause for a table includes Bounds, and mapper coordsys doesn't.
+		if MapperInfo(mapwinid, MAPPER_INFO_COORDSYS_NAME) <> tableinfo(g_graticule_index(graticule_index).tablename, TAB_INFO_COORDSYS_NAME) then
+			'coordsys has changed - make a new graticule using the new coordsys
+			'Create map for gridtablename coordsys window target_window
+			'remove the old graticule from the window
+			call graticule_debug(local_debug_level+3, "coordsys has changed: removing old graticule...")
+			set handler WinChangedHandler Off
+			call remove_graticule(graticule_index)
+			set handler WinChangedHandler On
+			
+			're-create the graticule for the window, using the same 
+			' graticule_index (which we know is free because we have just freed it)
+			call graticule_debug(local_debug_level+3, "adding new graticule...")
+			b_status = add_new_graticule_layer(mapwinid, graticule_index)
+
+			if b_status = True then
+				call update_graticule_coordsys(graticule_index)
+				call draw_graticule(graticule_index)
+			else
+				print "Unable to create the graticule for the new coordsys."
+			end if
+		else
+			'coordsys hasn't changed - don't need to recreate - just redraw
+			call draw_graticule(graticule_index)
+		end if
+	end if
+End If
+
+End Sub 'WinChangedHandler
+'***********
+sub draw_graticule(graticule_index as integer)
+
+call graticule_debug(2, "In draw_graticule(" + graticule_index + ")")
+
+call check_graticule_coordsys(graticule_index)
+call update_graticule_bounds(graticule_index)
+
+If g_graticule_index(graticule_index).gridunits = "degree" then
+	'We are drawing a latlong grid which will then be projected. Depending 
+	'on the projection this may result in horribly curved lines, labels in
+	'strange places, etc.
+	'work out what type of grid lines are required for the projection, and do it
+	call graticule_debug(2, "drawing graticule for projection " + g_graticule_index(graticule_index).projection)
+	Do Case g_graticule_index(graticule_index).projection
+		Case 1, 10 'standard MI latlong; Mercator
+			'draw straight gridlines
+			call update_default_mapper_gridlines(graticule_index)
+		Case 4, 5 'polar azimuthal
+			call update_PolarAzimuthal_gridlines(graticule_index)
+		Case 18 'NZMG
+			call update_latlongNZMG_gridlines(graticule_index)
+		case Else 'unknown
+			print "Unable to handle projection " + g_graticule_index(graticule_index).projection
+			call update_latlongNZMG_gridlines(graticule_index)
+	end case
+else
+	'we are drawing a non-latlong grid: just do a plain grid, shouldn't require 
+	'any fancy curves etc.
+	call update_default_mapper_gridlines(graticule_index)
+end if
+
+end sub 'draw_graticule
+'***********
+
+
+
+'*********
+sub update_PolarAzimuthal_gridlines(index_no as integer)
+dim ysiz as float
+dim grid_tablename as string
+dim mapper_zoom_deg as float
+dim grid_interval, curr_grid, first_meridian as float
+'dim cmig, npig, spig, eqig as logical
+dim prev_grid_visible as logical
+dim start_time, time_elapsed as integer
+dim latitude_pole, latitude_equator as float
+
+call graticule_debug(3, "entering update_PolarAzimuthal_gridlines...")
+
+'switch of redraws to eliminate incremental redraws, thereby speeding up 
+'the process
+set handler WinChangedHandler Off
+set Map Window g_graticule_index(index_no).map_win_id Redraw Off
+set event processing off
+
+'call determine_critical_intersections(index_no, cmig, npig, spig, eqig)
+
+grid_tablename = g_graticule_index(index_no).tablename
+delete from grid_tablename 'deletes current grid
+
+Set map window g_graticule_index(index_no).map_win_id layer grid_tablename label default 'removes labels
+
+'work out grid spacing based on optimum display of parallels. (111 kms per degree)
+Set Distance Units "m"
+Set paper units "cm"
+'scale will now return the number of m/cm displayed on the map.
+ysiz = windowInfo(g_graticule_index(index_no).map_win_id, WIN_INFO_HEIGHT) * MapperInfo(g_graticule_index(index_no).map_win_id, MAPPER_INFO_SCALE) / 111000
+'print "window size " + ysiz + " degrees."
+grid_interval = get_grid_interval(ysiz, g_graticule_index(index_no).gridunits, g_graticule_index(index_no).gridinterval_denom)
+call graticule_debug(4, "grid_interval = " + grid_interval)
+
+If grid_interval <> 0 then
+	
+	if g_graticule_index(index_no).win_miny > 0 then
+		'north polar projection
+		latitude_pole = 90
+	else
+		'south polar projection
+		latitude_pole = -90
+	end if
+	latitude_equator = 0
+	
+	call set_coordsys_GraticuleCoordsys(index_no)
+	
+	'start_time = timer()
+	'***** do elipses/circles for parallels (latitudes)
+	curr_grid = get_first_grid(g_graticule_index(index_no).win_miny, grid_interval)
+	prev_grid_visible = True
+	do while prev_grid_visible = True
+		'draw the next graticule
+		prev_grid_visible = create_circle_autogrid_line(curr_grid, index_no, g_graticule_index(index_no).win_minx) 
+		curr_grid = curr_grid + grid_interval
+	loop
+	curr_grid = get_first_grid(g_graticule_index(index_no).win_miny, grid_interval) - grid_interval
+	prev_grid_visible = True
+	do while prev_grid_visible = True
+		'draw the next graticule
+		prev_grid_visible = create_circle_autogrid_line(curr_grid, index_no, g_graticule_index(index_no).win_minx) 
+		curr_grid = curr_grid - grid_interval
+	loop
+	'time_elapsed = timer() - start_time
+	'print "time to draw elipses = " + time_elapsed
+	
+	
+	if g_north_pole intersects g_graticule_index(index_no).mapper_bounds_obj or
+	   g_south_pole intersects g_graticule_index(index_no).mapper_bounds_obj then
+		'Pole is in view: we need to draw every meridian
+		curr_grid = -180
+		Do while curr_grid <= 180
+			call create_straight_autogrid_line_nocheck(curr_grid, latitude_pole, curr_grid, latitude_equator, C_LONGITUDE_LINE, index_no)
+			curr_grid = curr_grid + grid_interval
+		Loop
+	
+	else
+		'only draw meridians that we need
+	
+	'this is a nice idea, but for some reason it doesn't work. :-(
+	'force the mapper_bounds_obj into the same coordsys as the graticule
+	'Insert into g_graticule_index(index_no).tablename (name, obj) 
+	'	Values("window", g_graticule_index(index_no).mapper_bounds_obj)
+	'select * 
+	'	from g_graticule_index(index_no).tablename 
+	'	where name = "window" 
+	'	into intersect_test_tab NOSELECT
+	'fetch first from intersect_test_tab 
+	'g_graticule_index(index_no).mapper_bounds_obj = intersect_test_tab.obj
+	
+	'do meridians / longitudes
+		'start_time = timer()
+		insert into g_graticule_index(index_no).tablename (name, obj) 
+			Values("window", g_graticule_index(index_no).mapper_bounds_obj)  
+		select * 
+			from g_graticule_index(index_no).tablename 
+			where name = "window" 
+				into intersect_test_tab NOSELECT
+		fetch first from intersect_test_tab 
+	
+		'insert into g_graticule_index(index_no).tablename (name, obj) 
+		'	Values("window_latlong", g_graticule_index(index_no).mapper_bounds_obj_latlong)
+		
+		first_meridian = get_first_grid(g_graticule_index(index_no).win_minx, grid_interval)
+		curr_grid = first_meridian
+		prev_grid_visible = True
+		'head East (increasing long value) while in view, and not going in circles.
+		do while (prev_grid_visible = True) and (curr_grid <= 180)
+			'draw the next graticule
+			prev_grid_visible = create_straight_autogrid_line(curr_grid, latitude_pole, curr_grid, latitude_equator,  C_LONGITUDE_LINE, index_no, C_LABEL_POSITION_MIN_INTERSECT) 
+		'print "doing long " + curr_grid + ": visible " + prev_grid_visible
+			curr_grid = curr_grid + grid_interval
+		loop
+		If (curr_grid >= 180) and (prev_grid_visible = True) then
+			curr_grid = curr_grid - 360
+		'print "swapping hemispheres..."
+		end if
+		'keep going East until out of view or all meridians drawn
+		do while (prev_grid_visible = True) and (curr_grid <= first_meridian)
+			'draw the next graticule
+			prev_grid_visible = create_straight_autogrid_line(curr_grid, latitude_pole, curr_grid, latitude_equator, C_LONGITUDE_LINE, index_no, C_LABEL_POSITION_MIN_INTERSECT) 
+		'print "doing long " + curr_grid + ": visible " + prev_grid_visible
+			curr_grid = curr_grid + grid_interval
+		loop
+		
+		if prev_grid_visible = False then
+			'we stopped drawing because we got out of view. Now draw in the other direction. By
+			'definition there is a break in the range of meridians, and not all are being drawn.
+			'Keep going till we get to that break.
+		'print "now going West..."
+			curr_grid = first_meridian - grid_interval
+			prev_grid_visible = True
+			'head East (increasing long value) while in view, and not going in circles.
+			do while (prev_grid_visible = True) and (curr_grid >= -180)
+				'draw the next graticule
+				prev_grid_visible = create_straight_autogrid_line(curr_grid, latitude_pole, curr_grid, latitude_equator, C_LONGITUDE_LINE, index_no, C_LABEL_POSITION_MIN_INTERSECT) 
+			'print "doing long " + curr_grid + ": visible " + prev_grid_visible
+				curr_grid = curr_grid - grid_interval
+			loop
+			If (curr_grid <= -180) and (prev_grid_visible = True) then
+				curr_grid = curr_grid + 360
+			end if
+			'keep going until out of view or all meridians drawn
+			do while (prev_grid_visible = True)
+				'draw the next graticule
+				prev_grid_visible = create_straight_autogrid_line(curr_grid, latitude_pole, curr_grid, latitude_equator , C_LONGITUDE_LINE, index_no, C_LABEL_POSITION_MIN_INTERSECT) 
+				curr_grid = curr_grid - grid_interval
+			loop
+		else
+		'print "don't need to go West."
+		end if
+	
+		select * 
+			from g_graticule_index(index_no).tablename 
+			where name = "window" 
+			into mapper_bounds_tab NOSELECT
+		delete from mapper_bounds_tab
+		close table mapper_bounds_tab
+		'time_elapsed = timer() - start_time
+		'print "time to draw meridians = " + time_elapsed
+	end if '
+else
+	print "Warning: grid interval = 0. No grid drawn."
+end if 'grid_interval <> 0
+
+set event processing on
+set Map Window g_graticule_index(index_no).map_win_id Redraw On
+set handler WinChangedHandler On
+
+end sub 'update_PolarAzimuthal_gridlines
+'***********
+'***********
+sub determine_critical_intersections(graticule_index as integer, cmig as logical, npig as logical, spig as logical, eqig as logical)
+dim central_meridian_in_graticule as logical
+
+If g_central_meridian intersects g_graticule_index(graticule_index).mapper_bounds_obj then
+	central_meridian_in_graticule = True
+	'print "found central_meridian_in_graticule = True"
+else
+	central_meridian_in_graticule = False	
+	'print "found central_meridian_in_graticule = False"
+end if
+if central_meridian_in_graticule then
+	'poles may also be in graticule
+	if g_north_pole intersects g_graticule_index(graticule_index).mapper_bounds_obj then
+		npig = True
+	else
+		npig = False
+
+
+	end if
+	if g_south_pole intersects g_graticule_index(graticule_index).mapper_bounds_obj then
+		spig = True
+	else
+		spig = False
+	end if
+else
+	'poles can't be in graticule
+	npig = false
+	spig = false
+end if
+cmig = central_meridian_in_graticule
+
+If g_equator intersects g_graticule_index(graticule_index).mapper_bounds_obj then
+	eqig = True
+Else
+	eqig = False
+end if
+end sub 'central_meridian_in_graticule
+'***********
+sub update_default_mapper_gridlines(index_no as integer)
+dim xsiz as float
+dim ysiz as float
+dim grid_interval, curr_grid as float
+dim grid_tablename as string
+dim dummyvar as logical
+
+call graticule_debug(3, "entering update_default_mapper_gridlines(" + index_no + ")")
+
+'switch of redraws to eliminate incremental redraws, thereby speeding up 
+'the process
+set handler WinChangedHandler Off
+set Map window g_graticule_index(index_no).map_win_id Redraw Off
+set event processing off
+
+grid_tablename = g_graticule_index(index_no).tablename
+call graticule_debug(10, "grid_tablename = """ + grid_tablename + """")
+delete from grid_tablename 'deletes current grid
+
+Set map window g_graticule_index(index_no).map_win_id layer grid_tablename label default 'removes labels
+
+	call set_coordsys_GraticuleCoordsys(index_no)
+	xsiz = abs(g_graticule_index(index_no).win_maxx - g_graticule_index(index_no).win_minx)
+	ysiz = abs(g_graticule_index(index_no).win_maxy - g_graticule_index(index_no).win_miny)
+	grid_interval = get_grid_interval(Minimum(xsiz, ysiz), g_graticule_index(index_no).gridunits, g_graticule_index(index_no).gridinterval_denom)
+	call graticule_debug(4, "grid_interval = " + grid_interval)
+	
+	If grid_interval <> 0 then
+		'Do longitude lines
+		curr_grid = get_first_grid(g_graticule_index(index_no).win_minx, grid_interval)
+		Do while curr_grid <= g_graticule_index(index_no).win_maxx
+			call create_straight_autogrid_line_nocheck(curr_grid, g_graticule_index(index_no).win_miny, curr_grid, g_graticule_index(index_no).win_maxy, C_LONGITUDE_LINE, index_no)
+			curr_grid = curr_grid + grid_interval
+		Loop
+		
+		'do latitude lines
+		curr_grid = get_first_grid(g_graticule_index(index_no).win_miny, grid_interval)
+		do while curr_grid <= g_graticule_index(index_no).win_maxy
+			call create_straight_autogrid_line_nocheck(g_graticule_index(index_no).win_minx, curr_grid, g_graticule_index(index_no).win_maxx, curr_grid, C_LATITUDE_LINE, index_no )
+			curr_grid = curr_grid + grid_interval
+		loop
+	else
+		print "Warning: grid interval = 0. No grid drawn."
+	end if
+
+set event processing on
+set Map window g_graticule_index(index_no).map_win_id Redraw On
+set handler WinChangedHandler On
+
+end sub 'update_mapper_gridlines
+'**********
+sub update_latlongNZMG_gridlines(graticule_index as integer)
+dim xsiz as float
+dim ysiz as float
+dim first_parallel, first_meridian as float
+dim grid_interval, curr_grid as float
+dim grid_tablename as string
+dim prev_grid_visible, first_drawn as logical
+dim lat_labelling_object, long_labelling_object as object
+
+'print "entering update_mapper_gridlines..."
+call graticule_debug(3, "entering update_latlongNZMG_gridlines...")
+
+'switch of redraws to eliminate incremental redraws, thereby speeding up 
+'the process
+set handler WinChangedHandler Off
+set Map window g_graticule_index(graticule_index).map_win_id Redraw Off
+set event processing off
+
+grid_tablename = g_graticule_index(graticule_index).tablename
+delete from grid_tablename 'deletes current grid
+
+Set map window g_graticule_index(graticule_index).map_win_id layer grid_tablename label default 'removes labels
+
+'create the labelling object (used to position labels) in the coordsys of the window
+set coordsys window g_graticule_index(graticule_index).map_win_id
+lat_labelling_object = CreateLine(
+	ObjectGeography(g_graticule_index(graticule_index).mapper_bounds_obj, OBJ_GEO_MINX), 
+	ObjectGeography(g_graticule_index(graticule_index).mapper_bounds_obj, OBJ_GEO_MINY), 
+	ObjectGeography(g_graticule_index(graticule_index).mapper_bounds_obj, OBJ_GEO_MINX), 
+	ObjectGeography(g_graticule_index(graticule_index).mapper_bounds_obj, OBJ_GEO_MAXY)) 
+long_labelling_object = CreateLine(
+	ObjectGeography(g_graticule_index(graticule_index).mapper_bounds_obj, OBJ_GEO_MINX), 
+	ObjectGeography(g_graticule_index(graticule_index).mapper_bounds_obj, OBJ_GEO_MINY), 
+	ObjectGeography(g_graticule_index(graticule_index).mapper_bounds_obj, OBJ_GEO_MAXX), 
+	ObjectGeography(g_graticule_index(graticule_index).mapper_bounds_obj, OBJ_GEO_MINY)) 
+
+'go back to the coordsys of the graticule
+call set_coordsys_GraticuleCoordsys(graticule_index)
+xsiz = abs(g_graticule_index(graticule_index).win_maxx - g_graticule_index(graticule_index).win_minx)
+ysiz = abs(g_graticule_index(graticule_index).win_maxy - g_graticule_index(graticule_index).win_miny)
+grid_interval = get_grid_interval(Minimum(xsiz, ysiz), g_graticule_index(graticule_index).gridunits, g_graticule_index(graticule_index).gridinterval_denom)
+call graticule_debug(4, "grid_interval = " + grid_interval)
+
+If grid_interval <> 0 then
+	'Do longitude lines
+	first_meridian = get_first_grid(g_graticule_index(graticule_index).win_minx, grid_interval)
+	'print "first meridian = " + first_meridian
+	curr_grid = first_meridian
+	first_drawn = False
+	Do while first_drawn = False
+		'construct lines until we get one that draws (if the window left boundary is 
+		'outside the coordsys bounds then the first grid may not draw, which results
+		'in no meridians at all.
+		first_drawn = create_warped_autogrid_line(curr_grid, g_graticule_index(graticule_index).win_miny, curr_grid, g_graticule_index(graticule_index).win_maxy, C_LONGITUDE_LINE, grid_interval, long_labelling_object, graticule_index)
+		curr_grid = curr_grid + grid_interval
+	Loop
+	prev_grid_visible = True
+	Do while (prev_grid_visible = True)
+		'head east (increasing long) while gridlines are still visible, then head west
+		prev_grid_visible = create_warped_autogrid_line(curr_grid, g_graticule_index(graticule_index).win_miny, curr_grid, g_graticule_index(graticule_index).win_maxy, C_LONGITUDE_LINE, grid_interval, long_labelling_object, graticule_index)
+		curr_grid = curr_grid + grid_interval
+	Loop
+	'now head west (decreasing longitude)
+	curr_grid = first_meridian - grid_interval
+	prev_grid_visible = True
+	Do while (prev_grid_visible = True)
+		'head east (increasing long) while gridlines are still visible, then head west
+		prev_grid_visible = create_warped_autogrid_line(curr_grid, g_graticule_index(graticule_index).win_miny, curr_grid, g_graticule_index(graticule_index).win_maxy, C_LONGITUDE_LINE, grid_interval, long_labelling_object, graticule_index)
+		curr_grid = curr_grid - grid_interval
+	Loop
+
+	'do latitude lines
+	first_parallel = get_first_grid(g_graticule_index(graticule_index).win_miny, grid_interval)
+	curr_grid = first_parallel
+	prev_grid_visible = True
+	do while (prev_grid_visible = True)
+		prev_grid_visible = create_warped_autogrid_line(g_graticule_index(graticule_index).win_minx, curr_grid, g_graticule_index(graticule_index).win_maxx, curr_grid, C_LATITUDE_LINE, grid_interval, lat_labelling_object, graticule_index)
+		curr_grid = curr_grid + grid_interval
+	loop
+	curr_grid =first_parallel - grid_interval
+	prev_grid_visible = True
+	do while (prev_grid_visible = True)
+		prev_grid_visible = create_warped_autogrid_line(g_graticule_index(graticule_index).win_minx, curr_grid, g_graticule_index(graticule_index).win_maxx, curr_grid, C_LATITUDE_LINE, grid_interval, lat_labelling_object, graticule_index)
+		curr_grid = curr_grid - grid_interval
+	loop
+else
+	print "Warning: grid interval = 0. No grid drawn."
+end if
+
+set event processing on
+set Map window g_graticule_index(graticule_index).map_win_id Redraw On
+set handler WinChangedHandler On
+
+
+end sub 'update_latlongNZMG_gridlines(graticule_index as integer)
+
+'**********
+function get_first_grid(win_boundary as float, grid_interval as float) as float
+dim temp_grid as float
+temp_grid = Round(win_boundary, grid_interval)
+
+if temp_grid < win_boundary then
+	temp_grid = temp_grid + grid_interval
+end if
+
+get_first_grid = temp_grid
+
+end function
+'**********
+function get_grid_interval(byval win_siz as float, byval interval_units as string, byval grid_interval_denominator as smallint) as float
+'return the most appropriate grid-interval for the given window size
+dim min_interval, max_interval, possible_interval, use_interval as float
+dim interval_index, max_interval_index as integer
+
+OnError goto general_error
+
+If win_siz = 0 then
+	use_interval = 0
+else
+	'divide the window size by the specified denominator for this grid (passed in parameter).
+	'This should equal the approximate number of gridlines the user wants (e.g. 2) plus two.
+	'Default is in the global variable g_default_gridinterval_denom
+	min_interval = win_siz/grid_interval_denominator
+	
+	'intervals: degrees 10, 5, 2, 1, 0.5 (30'), 0.3r (20'), 0.16r (10'), 5', 2', 1'
+	'           metres 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000, 2000000
+	'starting with smallest possible interval, for each possible interval, if interval is greater
+	'than the minimum then use it.
+	
+	max_interval_index = max_noof_intervals(interval_units) 'find out how many units we are going to check
+	use_interval = 0
+	interval_index = 1
+	do while use_interval = 0 and interval_index <= max_interval_index
+		possible_interval = get_interval_indexed(interval_index, interval_units)
+		If possible_interval >= min_interval then
+			'this possible_interval is in the given range - use it
+			use_interval = possible_interval
+		else
+			'try the next interval
+			interval_index = interval_index + 1
+		end if
+	loop
+	If use_interval = 0 then
+		'didn't find an interval, probably zoomed out way far - use the largest
+		use_interval = get_interval_indexed(max_interval_index, interval_units)
+	end if
+end if
+	
+finish:
+get_grid_interval = use_interval
+exit function
+	
+general_error:
+print "Error #" + err() + " while calculating grid interval. Message """ + error$() + """"
+use_interval = 0
+resume finish
+
+end function
+'***********
+function get_interval_indexed(interval_index as integer, interval_units as string) as float
+'interval_units is the units of the graticule, which is taken from the mapper xyunits
+Do case interval_units
+case "degree"
+	get_interval_indexed = get_deg_interval_indexed(interval_index)
+case "m", "yd"
+	get_interval_indexed = get_m_interval_indexed(interval_index)
+end case
+
+end function 'get_interval_indexed
+'***********
+function max_noof_intervals(interval_units as string) as integer
+do case interval_units
+case "degree"
+	max_noof_intervals = 11
+case "m", "yd"
+	max_noof_intervals = 20
+case else
+	max_noof_intervals = 0
+end case
+end function 'max_noof_intervals
+'***********
+function get_deg_interval_indexed(i as integer) as float
+Do case i
+case 1
+	get_deg_interval_indexed = 1/60
+case 2
+	get_deg_interval_indexed = 2/60
+case 3
+	get_deg_interval_indexed = 5/60
+case 4
+	get_deg_interval_indexed = 10/60
+case 5
+	get_deg_interval_indexed = 20/60
+case 6
+	get_deg_interval_indexed = 30/60
+case 7
+	get_deg_interval_indexed = 1
+case 8
+	get_deg_interval_indexed = 2
+case 9
+	get_deg_interval_indexed = 5
+case 10
+	get_deg_interval_indexed = 10
+case 11
+	get_deg_interval_indexed = 20
+end case
+end function
+'*********
+function get_m_interval_indexed(i as integer) as float
+'metres 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000, 2000000
+Do case i
+case 1
+	get_m_interval_indexed = 1
+case 2
+	get_m_interval_indexed = 2
+case 3
+	get_m_interval_indexed = 5
+case 4
+	get_m_interval_indexed = 10
+case 5
+	get_m_interval_indexed = 20
+case 6
+	get_m_interval_indexed = 50
+case 7
+	get_m_interval_indexed = 100
+case 8
+	get_m_interval_indexed = 200
+
+case 9
+	get_m_interval_indexed = 500
+case 10
+	get_m_interval_indexed = 1000
+case 11
+	get_m_interval_indexed = 2000
+case 12
+	get_m_interval_indexed = 5000
+case 13
+	get_m_interval_indexed = 10000
+case 14
+	get_m_interval_indexed = 20000
+case 15
+	get_m_interval_indexed = 50000
+case 16
+	get_m_interval_indexed = 100000
+case 17
+	get_m_interval_indexed = 200000
+case 18
+	get_m_interval_indexed = 500000
+case 19
+	get_m_interval_indexed = 1000000
+case 20
+	get_m_interval_indexed = 2000000
+end case
+end function 'get_m_interval_indexed
+'*********
+
+'*******
+function create_straight_autogrid_line(byval from_x as float, 
+            byval from_y as float, 
+            byval to_x as float, 
+            byval to_y as float, 
+            byval line_type as integer, 
+            byval graticule_index as integer,
+            byval label_positioning as integer) as logical
+dim tempobj, tempobj2 as object
+dim label_positioning_obj as object
+dim new_rowid as integer
+dim grid_table_rowid, grid_table_obj as alias
+dim grid_tablename as string
+dim set_coordsys_command as string
+dim label_x, label_y, temp_y as float
+dim n, num_nodes as integer
+dim obj_intersects as logical
+
+'call set_coordsys_GraticuleCoordsys(graticule_index)
+Create line 
+  into variable tempobj
+  (from_x, from_y) (to_x, to_y)
+  'Pen g_gridpen
+  pen g_graticule_index(graticule_index).gridpen 
+
+'NB: MapInfo has a bug, or at least a severe limitation that results in the following
+'behaviour: when comparing the overlap of two objects in different coordinate systems it
+'gets it wrong.
+'If tempobj intersects g_graticule_index(graticule_index).mapper_bounds_obj then
+  'create_straight_autogrid_line = True
+  
+  grid_table_rowid = g_graticule_index(graticule_index).tablename + ".rowid"
+  grid_tablename = g_graticule_index(graticule_index).tablename 
+  grid_table_rowid = grid_tablename + ".rowid"
+  grid_table_obj = grid_tablename + ".obj"
+  if line_type = C_LONGITUDE_LINE then
+    'draw a longitude line
+    Insert into grid_tablename (name, obj) 
+      Values(format_label(from_x, line_type, g_graticule_index(graticule_index).gridunits), tempobj)
+    fetch last from grid_tablename 
+    new_rowid = grid_table_rowid 
+    select * from grid_tablename where rowid = new_rowid into newobj_tab NOSELECT
+
+    select * 
+      from grid_tablename 
+      where (rowid = new_rowid) and (obj intersects (select obj from grid_tablename where name = "window")) 
+      into test_intersect_tab NOSELECT
+    if TableInfo("test_intersect_tab", tab_info_nrows) <= 0 then
+      'print "-165 doesn't intersect"
+      obj_intersects = False
+    else
+      'print "-165 does intersect."
+      obj_intersects = true
+    
+    'add the label
+    if label_positioning = C_LABEL_POSITION_DEFAULT then
+      'position the label at from_x, from_y
+      label_x = from_x
+      label_y = from_y
+    Else
+      'need to work out the latitude at which to position the label
+      label_x = from_x
+
+      'label_positioning_obj = IntersectNodes(tempobj, g_graticule_index(graticule_index).mapper_bounds_obj, INCL_ALL)
+      label_positioning_obj = Overlap(tempobj, g_graticule_index(graticule_index).mapper_bounds_obj)
+      'label_positioning_obj = Overlap(intersect_test_tab.obj, tempobj) 'doesn't work: is sensitive to the order of arguments, and returns garbage
+      'label_positioning_obj = IntersectNodes(tempobj, intersect_test_tab.obj, INCL_ALL) 'ditto
+      'label_positioning_obj = IntersectNodes(intersect_test_tab.obj, tempobj, INCL_CROSSINGS) 'DITTO
+      'label_positioning_obj = Overlap(intersect_test_tab.obj, newobj_tab.obj)
+      'label_positioning_obj = IntersectNodes(intersect_test_tab.obj, newobj_tab.obj, INCL_ALL) 
+      'select Overlap(intersect_test_tab.obj, newobj_tab.obj) 
+      ' from grid_tablename 
+      ' where (rowid = new_rowid) and intersect_test_tab.obj intersects newobj_tab.obj 
+      ' into intersects_tab NOSELECT
+      'fetch first from intersects_tab
+      'label_positioning_obj = intersects_tab.obj
+      
+      ''the following works well, but is too slow. :-(
+      'select * from grid_tablename where rowid = new_rowid
+      'set target on 'prepare for erasing, which is unfortunately necessary while overlap and intersectNodes functions are buggy
+      'select * from grid_tablename where name = "window" 
+      'Objects Intersect Into Target Data name=name
+      'set target off
+      'fetch last from grid_tablename
+      'new_rowid = grid_table_rowid 
+      'label_positioning_obj = grid_table_obj
+      
+      'Set Coordsys Window g_graticule_index(graticule_index).map_win_id      
+      'label_positioning_obj = Overlap(newobj_tab.obj, intersect_test_tab.obj)
+
+      num_nodes = objectInfo(label_positioning_obj, OBJ_INFO_NPNTS) 
+      if num_nodes > 0 then
+        Insert into grid_tablename (name, obj) 
+          Values(from_x, label_positioning_obj)
+'call set_coordsys_GraticuleCoordsys(graticule_index)
+        'look for the longitude/window intersection
+        label_y = ObjectNodeY(label_positioning_obj, 1, 1)
+        for n = 2 to num_nodes
+          temp_y = ObjectNodeY(label_positioning_obj, 1, n)
+          if temp_y > label_y then
+            label_y = temp_y
+          end if
+        next
+      else
+        'put label at from_y
+        label_y = from_y
+      end if
+    end if
+    'print "positioning label " + from_x + " at lat " + label_y
+    Set Map 
+      Window g_graticule_index(graticule_index).map_win_id
+      Layer grid_tablename 
+      Label 
+        Object new_rowid 
+        Anchor (label_x, label_y) 
+        Angle 90
+    end if
+  else
+    'draw a latitude line
+    Insert into grid_tablename (name, obj) 
+      Values(format_label(from_y, line_type, g_graticule_index(graticule_index).gridunits), tempobj)
+    fetch last from grid_tablename 
+    new_rowid = grid_table_rowid 
+    Set Map 
+      Window g_graticule_index(graticule_index).map_win_id 
+      Layer grid_tablename 
+      Object new_rowid Anchor (from_x, from_y) Angle 0
+
+    select * 
+      from grid_tablename 
+      where (rowid = new_rowid) and (obj intersects (select obj from grid_tablename where name = "window")) 
+      into test_intersect_tab NOSELECT
+    if TableInfo("test_intersect_tab", tab_info_nrows) <= 0 then
+      obj_intersects = False
+    else
+      obj_intersects = true
+    end if
+  end if
+
+create_straight_autogrid_line = obj_intersects 
+
+
+'if from_x = -165 then
+' select * 
+'   from grid_tablename 
+'   where (rowid = new_rowid) and (obj intersects (select obj from grid_tablename where name = "window")) 
+'   into test_intersect_tab NOSELECT
+'
+' if TableInfo("test_intersect_tab", tab_info_nrows) <= 0 then
+'   print "-165 doesn't intersect"
+' else
+'   print "-165 does intersect."
+' end if
+'end if
+'
+'
+'else
+' create_straight_autogrid_line = False
+'end if
+
+end function 'create_straight_autogrid_line
+'**********
+sub create_straight_autogrid_line_nocheck(byval from_x as float, 
+            byval from_y as float, 
+            byval to_x as float, 
+            byval to_y as float, 
+            byval line_type as integer, 
+            byval graticule_index as integer)
+dim tempobj, tempobj2 as object
+dim new_rowid as integer
+dim grid_table_rowid as alias
+dim grid_tablename as string
+dim set_coordsys_command as string
+
+Create line 
+  into variable tempobj
+  (from_x, from_y) (to_x, to_y)
+  'Pen g_gridpen
+  pen g_graticule_index(graticule_index).gridpen 
+
+  grid_table_rowid = g_graticule_index(graticule_index).tablename + ".rowid"
+  grid_tablename = g_graticule_index(graticule_index).tablename 
+  grid_table_rowid = grid_tablename + ".rowid"
+  if line_type = C_LONGITUDE_LINE then
+    'draw a longitude line
+    Insert into grid_tablename (name, obj) 
+      Values(format_label(from_x, line_type, g_graticule_index(graticule_index).gridunits), tempobj)
+    fetch last from grid_tablename 
+    new_rowid = grid_table_rowid 
+    Set Map 
+      Window g_graticule_index(graticule_index).map_win_id
+      Layer grid_tablename 
+      Object new_rowid 
+      Anchor (from_x, from_y) 
+      Offset 2 
+      Angle 90
+  else
+    'draw a latitude line
+    Insert into grid_tablename (name, obj) 
+      Values(format_label(from_y, line_type, g_graticule_index(graticule_index).gridunits), tempobj)
+    fetch last from grid_tablename 
+    new_rowid = grid_table_rowid 
+    Set Map 
+      Window g_graticule_index(graticule_index).map_win_id
+      Layer grid_tablename 
+      Object new_rowid 
+      Anchor (from_x, from_y) 
+      Offset 2 
+      Angle 0
+  end if
+
+end sub 'create_straight_autogrid_line_nocheck
+'**********
+FUNCTION create_warped_autogrid_line(byval from_x as float, 
+            byval from_y as float, 
+            byval to_x as float, 
+            byval to_y as float, 
+            byval line_type as integer, 
+            byval grid_interval as float,
+            byval labelling_object as object,
+            byval graticule_index as integer) AS LOGICAL
+'for drawing warped grid lines where we are not expecting major distortion, e.g. for lat/long
+'lines in NZMG projection. This will probably start to fail in projections with major 
+'distortion, resulting in lines not drawing at all, or lines not meeting window edges.
+dim add_x, add_y as float
+dim start_posn, temp_posn, target_posn, label_posn, this_nodePosn as float
+dim tempobj, intersects_obj as object
+dim new_rowid as integer
+dim grid_table_rowid as alias
+dim noof_intersects, node_no as integer
+
+Create Pline 
+  into variable tempobj
+  0
+  'Pen g_gridpen
+  pen g_graticule_index(graticule_index).gridpen 
+
+'if needed, add intermediate nodes, at 1 degree intervals
+if line_type = C_LATITUDE_LINE then
+  'doing a latitude line: add intermeditate x nodes, constant y 
+
+  'first node: draw from one grid interval outside the window to make sure the line
+  'reaches the window limit. With major distortion this may not be enough, in which 
+  'case it would be necessary to jump along the line looking for a point that is outside 
+  'the window and start there. For the moment assume this is sufficient.
+  start_posn = from_x - grid_interval
+  target_posn = to_x + grid_interval
+
+  temp_posn = start_posn
+  do while temp_posn < target_posn 
+    'add a node at the current x value
+    add_x = temp_posn
+    add_y = from_y
+    Alter object tempobj node add (add_x, add_y)
+    temp_posn = temp_posn + 1
+  loop
+  'final node
+  add_x = target_posn
+  add_y = from_y
+  Alter object tempobj node add (add_x, add_y)
+  
+else
+  'doing a longitude line: need intermediate y points, constant x 
+  start_posn = from_y - grid_interval
+  target_posn = to_y + grid_interval
+  
+  temp_posn = start_posn
+  do while temp_posn < target_posn
+    'add a node at the current y value
+    add_x = from_x
+    add_y = temp_posn
+    Alter object tempobj node add (add_x, add_y)
+    temp_posn = temp_posn + 1
+  loop
+  'add final node
+  add_x = from_x
+  add_y = target_posn
+  Alter object tempobj node add (add_x, add_y)
+
+end if
+
+
+'now work out if the line acutally displays
+If tempobj intersects g_graticule_index(graticule_index).mapper_bounds_obj then
+  'line will display - do it
+  create_warped_autogrid_line = True
+  grid_table_rowid = g_graticule_index(graticule_index).tablename + ".rowid"
+  if line_type = C_LONGITUDE_LINE then
+    'draw a longitude line
+    'find appropriate label position
+
+    intersects_obj = IntersectNodes(labelling_object, tempobj, INCL_ALL)
+    noof_intersects = Objectinfo(intersects_obj, OBJ_INFO_NPNTS)
+    
+    if noof_intersects = 0 then
+      'object doesn't intersect - probably some mess-up with out-of-coordsys-bounds
+      label_posn = start_posn
+    elseif noof_intersects = 1 then
+      'label_posn = minimum(ObjectNodeY(intersects_obj, 1, 1), start_posn)
+      label_posn = ObjectNodeY(intersects_obj, 1, 1)
+    else
+      'find lowest intersect value
+      label_posn = ObjectNodeY(intersects_obj, 1, 1)
+      for node_no = 2 to noof_intersects
+        this_nodePosn = ObjectNodeY(intersects_obj, 1, node_no)
+        if this_nodePosn < label_posn then
+          label_posn = this_nodePosn
+        end if
+      next
+    end if
+    Insert into g_graticule_index(graticule_index).tablename (name, obj) 
+      Values(format_label(from_x, line_type, g_graticule_index(graticule_index).gridunits), tempobj)
+    fetch last from g_graticule_index(graticule_index).tablename
+    new_rowid = grid_table_rowid 
+    Set Map 
+      Window g_graticule_index(graticule_index).map_win_id
+      Layer g_graticule_index(graticule_index).tablename 
+      Object new_rowid 
+      Anchor (from_x, label_posn) 
+      offset 2
+      Angle 90
+  else
+    'draw a latitude line
+    intersects_obj = IntersectNodes(labelling_object, tempobj, INCL_ALL)
+    noof_intersects = Objectinfo(intersects_obj, OBJ_INFO_NPNTS)
+    If noof_intersects = 0 then 
+      'object doesn't intersect - probably some mess-up with out-of-coordsys-bounds
+      label_posn = start_posn
+    elseif noof_intersects = 1 then
+      'label_posn = minimum(ObjectNodeX(intersects_obj, 1, 1), start_posn)
+      label_posn = ObjectNodeX(intersects_obj, 1, 1)
+    else
+      label_posn = ObjectNodeX(intersects_obj, 1, 1)
+      for node_no = 2 to noof_intersects
+        'if line intersects more than once find lowest intersect value
+        this_nodePosn = ObjectNodeX(intersects_obj, 1, node_no)
+        if this_nodePosn < label_posn then
+          label_posn = this_nodePosn
+        end if
+      next
+    End If
+    Insert into g_graticule_index(graticule_index).tablename (name, obj) 
+      Values(format_label(from_y, line_type, g_graticule_index(graticule_index).gridunits), tempobj)
+    fetch last from g_graticule_index(graticule_index).tablename 
+    new_rowid = grid_table_rowid 
+    Set Map 
+      Window g_graticule_index(graticule_index).map_win_id
+      Layer g_graticule_index(graticule_index).tablename 
+      Object new_rowid 
+        Anchor (label_posn, add_y) 
+        offset 2
+        Angle 0
+  end if
+else
+  create_warped_autogrid_line = False
+end if
+end function 'create_warped_autogrid_line
+'**********
+function create_circle_autogrid_line(byval lat as float, graticule_index as integer, from_x as Float) as logical
+dim tempobj, label_posn_obj, window_edge_obj as object
+dim grid_tablename as string
+dim grid_table_rowid as alias
+dim new_rowid as integer
+'dim mbrlat as float
+'dim lat_rad, Cos_lat_rad, cos_lat_deg, cos_mult_sqr2, cos_mult_sqr2_rad, ac_rad, ac_deg as float
+
+'Create Arc
+' into variable tempobj
+' (-180, lat) (180, lat)
+' 0 180
+' 'Brush(01, BLACK, BLACK)
+' Pen g_gridpen
+Create Ellipse
+  into variable tempobj
+  (-180, lat) (180, lat)
+  Brush(01, BLACK, BLACK)
+  'Pen g_gridpen
+  pen g_graticule_index(graticule_index).gridpen 
+
+'now work out if the line acutally displays
+If tempobj intersects g_graticule_index(graticule_index).mapper_bounds_obj then
+  'line will display - do it
+  create_circle_autogrid_line = True
+
+  grid_table_rowid = g_graticule_index(graticule_index).tablename + ".rowid"
+  grid_tablename = g_graticule_index(graticule_index).tablename 
+  'draw a latitude line
+  Insert into grid_tablename (name, obj) 
+    Values(format_label(lat, C_LATITUDE_LINE, "degree"), tempobj)
+  fetch last from grid_tablename 
+  new_rowid = grid_table_rowid 
+
+  Set Map 
+    Window g_graticule_index(graticule_index).map_win_id
+    Layer grid_tablename 
+    Object new_rowid Anchor (from_x, lat) Angle 0
+else
+  create_circle_autogrid_line = False
+end if
+
+end function 'create_circle_autogrid_line
+'**********
+function format_label(line_value as float, byval xy as integer, byval units as string) as string
+'returns a properly formatted string for labelling a grid line
+do case units
+case "degree"
+  format_label = decdeg2d_dm(line_value, xy)
+case "m"
+  format_label = str$(line_value) + "m"
+case "yd"
+  format_label = str$(line_value) + "yd"
+case else
+  format_label = str$(line_value) + units
+end case
+end function 'format_label
+'**********
+function decdeg2d_dm(byval decdeg as float, byval latlong as integer) as string
+dim deg_part$, dec_min_part$, NSEW_part as string
+dim normal_decdeg as float
+
+'need to remove the effect of cumulative additions of floating numbers, e.g.
+'-20 likely to be actually -19.9999999999999
+decdeg = Round(decdeg, 0.0000000000001) 
+
+If latlong = C_LONGITUDE_LINE then
+  'format a longitude value
+  'normalise value to between -180 and +180
+  normal_decdeg = decdeg
+  do while normal_decdeg > 180
+    normal_decdeg = normal_decdeg - 360
+  loop
+  do while normal_decdeg < -180
+    normal_decdeg = normal_decdeg + 360
+  loop
+  if normal_decdeg >=0 then
+    NSEW_part = "E"
+  else
+    NSEW_part = "W"
+  end if
+  deg_part$ = str$(abs(Fix(normal_decdeg)))
+  dec_min_part$ = format$((abs(normal_decdeg - Fix(normal_decdeg))*60), "00.0####")
+Else
+  'format a latitude value
+  If decdeg > 0 then
+    NSEW_part = "N"
+  Else
+    NSEW_part = "S"
+  End If
+  deg_part$ = str$(abs(Fix(decdeg)))
+  dec_min_part$ = format$((abs(decdeg - Fix(decdeg))*60), "00.0####")
+'print "decdeg = " + format$(decdeg, "0.00000000000000000000") + ", deg_part$ = " + deg_part$
+end if
+
+decdeg2d_dm = deg_part$ + " " + dec_min_part$ + " " + NSEW_part
+
+end function 'decdeg2d_dm
+'**********
+
+'*************
+function TableAvailable(byval tablename as string) as logical
+'checks to see if a table of the given name is currently open.
+'Returns True if table is open, false if not or if table otherwise not available.
+dim tab_no as integer
+
+OnError Goto table_available_error
+tab_no = TableInfo(tablename, TAB_INFO_NUM)
+
+'if we have got to here, there was not an error, so the table must be available
+TableAvailable = True
+OnError Goto 0
+
+Exit Function
+Table_Available_error:
+TableAvailable = False
+
+end function 'TableAvailable
+'**************
+function get_temporary_tablename() as string
+dim tempname as string
+
+'tempname = "c:\windows\temp\~" + str$(timer()) 
+tempname = PathToDirectory$(tempfilename$("")) + "~" + str$(timer()) 
+
+'%%% should check to see if any disk files exist tempname.* Need a list of all
+'extensions that could happen for a MI table
+'meanwhile assume this is unique
+
+get_temporary_tablename = tempname
+
+end function
+'**********
+function parse_coordsys_projection_clause(byval	coordsys_string as string,
+
+								projection_no as integer,
+								datum_no as integer,
+								units as string) as logical
+
+dim uc_coordsys_string as string
+dim units_clause_posn, units_start_posn, units_end_posn, datum_start_posn, projection_clause_start, projection_start_posn, datum_end_posn as integer
+dim tempstr, projection_str as string
+dim datum_str as string
+dim tempval as integer
+dim temp_projn_no, temp_datum_no as integer
+dim temp_units_str as string
+dim parse_status as logical
+
+OnError goto general_error
+
+uc_coordsys_string = UCase$(LTrim$(coordsys_string))
+'work out if Earth, NonEarth, or Layout, else error
+'print "uc_coordsys_string = " + uc_coordsys_string 
+If Left$(uc_coordsys_string, 14) = "COORDSYS EARTH" then
+	projection_clause_start = Instr(15, uc_coordsys_string, "PROJECTION")
+'print "projection_clause_start = " + projection_clause_start 
+	if projection_clause_start = 0 then
+		'couldn't find projection clause - default to latlong
+		temp_projn_no = 1
+		temp_datum_no = 0
+		temp_units_str = "degree"
+	else 'there is a projection clause
+		'find the end of the projection number / start of the datum
+		projection_start_posn = projection_clause_start + 10
+		datum_start_posn = instr(projection_start_posn, uc_coordsys_string, ",")
+'print "datum_start_posn = " + datum_start_posn 
+		if datum_start_posn <> 0 then
+			'found the datum clause, extract the projection just before that.
+			projection_str = mid$(uc_coordsys_string, projection_start_posn,  datum_start_posn - projection_start_posn)
+			temp_projn_no = val(projection_str)
+			if temp_projn_no = 0 then
+				temp_projn_no = 1
+			end if
+			
+			'found the datum start, now find the end
+			datum_end_posn = instr(datum_start_posn+1, uc_coordsys_string, ",")
+			if datum_end_posn <> 0 then
+				'found the end of the datum clause
+				datum_str = mid$(uc_coordsys_string, (datum_start_posn+1), (datum_end_posn - datum_start_posn - 1))
+				
+				'now extract the units
+				units_start_posn = Instr(datum_end_posn + 1, uc_coordsys_string, """")
+				If units_start_posn > 0 then
+					'find end of quoted unit name
+					units_end_posn = instr(units_start_posn+1, uc_coordsys_string, """")
+					temp_units_str = mid$(uc_coordsys_string, units_start_posn+1, units_end_posn - units_start_posn - 1)
+				else
+					'no data in units clause - default to degrees
+					temp_units_str = "degree"
+				end if
+			else
+				'we found the beginning but couldn't find the end of the datum 
+				'clause (probably datum is the last item). Just take everything
+				'to the right of datum_start as datum
+				datum_str = right$(uc_coordsys_string, len(uc_coordsys_string)-datum_start_posn)
+				temp_units_str = "degree"
+			end if
+			temp_datum_no = val(ltrim$(datum_str))
+			
+		else
+			'didn't find the start of the datum clause. Extract any value to 
+			'the right of "PROJECTION" as projection
+			projection_str = right$(uc_coordsys_string, len(uc_coordsys_string) - projection_start_posn)
+			if projection_str = "" then
+				'Probably an illegal error
+				temp_projn_no = 1
+				temp_datum_no = 0
+				temp_units_str = "degree"
+			else
+				'there is some data in the projection clause - read it in as projection
+				temp_projn_no = val(projection_str)
+				temp_datum_no = 0
+				temp_units_str = "degree"				
+			end if
+		end if
+	end if
+	parse_status = True	
+else
+	'Not an earth coordsys
+	parse_status = false
+end if
+
+projection_no = temp_projn_no
+datum_no = temp_datum_no
+units = temp_units_str
+
+finish:
+parse_coordsys_projection_clause= parse_status
+exit function
+
+general_error:
+print "Error #" + err() + " while parsing coordsys clause. Message """ + error$() + """"
+parse_status = false
+resume finish
+
+end function 'parse_coordsys_projection_clause
+'**********
+function DatumNo2DatumName(byval datum_no as integer) as string
+dim datums_tab as string
+
+If datum_no = 0 then
+	'default "unspecified" datum
+	DatumNo2DatumName = "Unspecified"
+else
+	'a datum given - check it.
+	Open Table "F:\SRC\VMS\MapInfoData\Data Library\mi_Datums.TAB" Interactive
+	datums_tab = TableInfo(0, TAB_INFO_NAME)
+	
+	select * from datums_tab where datum_number = datum_no into datum_details NOSELECT
+	if tableinfo(datum_details, TAB_INFO_NROWS) > 0 then
+		'we found the data
+		fetch first from datum_details
+		datumNo2DatumName = datum_details.datum_name
+	else
+		'no data found
+		datumNo2DatumName = ""
+	end if
+end if
+
+end function 'DatumNo2DatumName
+'**********
+function get_coordsys_datum(byval coordsys_string as string) as integer
+'parses the coordsys_string to find the datum
+dim uc_coordsys_string as string
+dim units_clause_posn, units_start_posn, units_end_posn, datum_start_posn, datum_end_posn, projection_clause_start, projection_start_posn as integer
+dim datum_str, projection_str as string
+dim tempval as integer
+
+uc_coordsys_string = UCase$(LTrim$(coordsys_string))
+'print "uc_coordsys_string = " + uc_coordsys_string 
+'work out if Earth, NonEarth, or Layout, else error
+If Left$(uc_coordsys_string, 14) = "COORDSYS EARTH" then
+	projection_clause_start = Instr(15, uc_coordsys_string, "PROJECTION")
+	if projection_clause_start = 0 then
+		'couldn't find projection clause, just "Coordsys Earth" which id legitimate - default to "latlong"
+		get_coordsys_datum = 0
+	else
+		'found the projection clause, now find the datum clause
+		projection_start_posn = projection_clause_start + 10 'end of word "projection"
+		datum_start_posn = instr(projection_start_posn, uc_coordsys_string, ",")
+		if datum_start_posn <> 0 then
+			'found the datum start, now find the end
+			datum_end_posn = instr(datum_start_posn+1, uc_coordsys_string, ",")
+			if datum_end_posn <> 0 then
+				'found the end of the datum clause
+				datum_str = mid$(uc_coordsys_string, (datum_start_posn+1), (datum_end_posn - datum_start_posn - 1))
+			else
+				'we found the beginning but couldn't find the end of the datum 
+				'clause (probably datum is the last item). Just take everything
+				'to the right of the comma.
+				datum_str = right$(uc_coordsys_string, len(uc_coordsys_string)-datum_start_posn)
+			end if
+			get_coordsys_datum = val(ltrim$(datum_str))
+		else
+			'didn't find the datum start. This is illegal.
+			get_coordsys_datum = -1
+		end if
+	end if
+else
+	'error
+	get_coordsys_datum = -1
+end if
+end function 'get_coordsys_datum
+'**********
+function get_coordsys_projection(byval coordsys_string as string) as integer
+'parses the coordsys_string to find the projection number
+dim uc_coordsys_string as string
+dim units_clause_posn, units_start_posn, units_end_posn, datum_start_posn, projection_clause_start, projection_start_posn as integer
+dim tempstr, projection_str as string
+dim tempval as integer
+
+uc_coordsys_string = UCase$(LTrim$(coordsys_string))
+'print "uc_coordsys_string = " + uc_coordsys_string 
+'work out if Earth, NonEarth, or Layout, else error
+If Left$(uc_coordsys_string, 14) = "COORDSYS EARTH" then
+	projection_clause_start = Instr(15, uc_coordsys_string, "PROJECTION")
+	if projection_clause_start = 0 then
+		'couldn't find projection clause - default to latlong
+		get_coordsys_projection = 1
+	else
+		'find the datum clause
+		projection_start_posn = projection_clause_start + 10
+'print "projection_start_posn = " + projection_start_posn 
+		datum_start_posn = instr(projection_start_posn, uc_coordsys_string, ",")
+'print "datum_start_posn = "+ datum_start_posn 
+		if datum_start_posn <> 0 then
+			'found the datum clause, extract the projection just before that.
+			projection_str = mid$(uc_coordsys_string, projection_start_posn,  datum_start_posn - projection_start_posn)
+'print "projection str: """ + projection_str + """"
+			tempval = val(projection_str)
+			if tempval = 0 then
+				get_coordsys_projection = 1
+			else
+				get_coordsys_projection = tempval
+			end if
+		else
+			'didn't find the datum clause. Extract any value to the right of "PROJECTION"
+			tempstr = right$(uc_coordsys_string, len(uc_coordsys_string) - projection_start_posn)
+			if tempstr = "" then
+				get_coordsys_projection = 1
+			else
+				get_coordsys_projection = val(tempstr)
+			end if
+		end if
+	end if
+
+else
+	'error
+	get_coordsys_projection = -1
+end if
+end function 'get_coordsys_projection
+'******* 
+function get_coordsys_gridunits(byval coordsys_string as string) as string
+'parses the coordsys_string to find the grid_units element
+dim uc_coordsys_string as string
+dim units_clause_posn, units_start_posn, units_end_posn, datum_start_posn, projection_clause_start as integer
+
+uc_coordsys_string = UCase$(LTrim$(coordsys_string))
+
+'work out if Earth, NonEarth, or Layout, else error
+If Left$(uc_coordsys_string, 17) = "COORDSYS NONEARTH" then
+	'Nonearth coordsys - look for units clause
+	units_clause_posn	= Instr(18, uc_coordsys_string, "UNITS")
+	If units_clause_posn <> 0 then
+		'find the quoted unit name
+		units_start_posn = Instr(units_clause_posn, uc_coordsys_string, """")
+		If units_start_posn > 0 then
+			'find end of quoted unit name
+			units_end_posn = instr(units_start_posn+1, uc_coordsys_string, """")
+			get_coordsys_gridunits = mid$(uc_coordsys_string, units_start_posn+1, units_end_posn - units_start_posn - 1)
+		else
+			'error
+			get_coordsys_gridunits = ""
+		end if
+	else
+		'error
+
+
+
+
+
+
+
+
+		get_coordsys_gridunits = ""
+	end if
+
+elseif Left$(uc_coordsys_string, 14) = "COORDSYS EARTH" then
+	'Earth coordsys - look for projection clause
+	projection_clause_start = Instr(15, uc_coordsys_string, "PROJECTION")
+	if projection_clause_start = 0 then
+		'couldn't find projection clause - default to latlong
+		get_coordsys_gridunits = "degree"
+	else
+		'find the units clause
+		datum_start_posn = instr(projection_clause_start+1, uc_coordsys_string, ",")
+		if datum_start_posn <> 0 then
+			units_clause_posn = instr(datum_start_posn + 1, uc_coordsys_string, ",")
+			if units_clause_posn <> 0 then
+				'found it!
+				'now find the quotes
+				units_start_posn = Instr(units_clause_posn + 1, uc_coordsys_string, """")
+				If units_start_posn > 0 then
+					'find end of quoted unit name
+					units_end_posn = instr(units_start_posn+1, uc_coordsys_string, """")
+					get_coordsys_gridunits = mid$(uc_coordsys_string, units_start_posn+1, units_end_posn - units_start_posn - 1)
+				else
+					'no data in units clause - default to degrees
+					get_coordsys_gridunits = "degree"
+				end if
+				
+			else
+				get_coordsys_gridunits = "degree"
+			end if
+		else
+			get_coordsys_gridunits = "degree"
+		end if
+	end if
+
+elseif Left$(uc_coordsys_string, 15) = "COORDSYS LAYOUT" then
+	'Layout coordsys - look for units clause
+	units_clause_posn	= Instr(16, uc_coordsys_string, "UNITS")
+	If units_clause_posn <> 0 then
+		'find the quoted unit name
+		units_start_posn = Instr(units_clause_posn, uc_coordsys_string, """")
+		If units_start_posn > 0 then
+			'find end of quoted unit name
+			units_end_posn = instr(units_start_posn+1, uc_coordsys_string, """")
+			get_coordsys_gridunits = mid$(uc_coordsys_string, units_start_posn+1, units_end_posn - units_start_posn - 1)
+		else
+			'error
+			get_coordsys_gridunits = ""
+		end if
+	else
+		'error
+		get_coordsys_gridunits = ""
+	end if
+
+else
+	'error
+	get_coordsys_gridunits = ""
+end if
+
+
+end function 'get_coordsys_gridunits
+'********
+'*******
+function get_free_fileno() as integer
+'looks for a free io_fileno
+
+dim tempfilename as string
+dim testno as integer
+dim freefile_found  as logical
+dim test_fileattr as smallint
+
+freefile_found = False
+OnError Goto get_free_fileno_err
+for testno = 1 to 1000
+	test_fileattr = FileAttr(testno, FILE_ATTR_MODE)
+next
+OnError Goto 0
+
+finish_up:
+If freefile_found then
+	get_free_fileno = testno
+else
+end if
+
+exit function
+get_free_fileno_err:
+If err() = ERR_FILEMGR_NOTOPEN then
+	'found it!
+	freefile_found = True
+	resume finish_up	
+else
+end if
+
+end function
+'************
+Sub Debug(byval this_debug_level as integer, byval debug_message as string, byval current_active_debug_level as integer)
+If this_debug_level <= current_active_debug_level then
+	Print debug_message
+end if
+end sub 'debug
+'*************
+function get_layerno_named(byval win_id as integer, byval layername as string) as smallint
+dim noof_layers, this_layer, found_layer_no as smallint
+
+found_layer_no = -1
+noof_layers = MapperInfo(win_id, MAPPER_INFO_LAYERS)
+for this_layer = 1 to noof_layers
+	if LayerInfo(win_id, this_layer, LAYER_INFO_NAME) = layername then
+		'this is it!
+		found_layer_no = this_layer
+		exit for
+	end if
+next
+
+get_layerno_named = found_layer_no
+
+end function 'get_layerno_named(byval winid as integer, byval layername as string) as smallint
+'***********
+function FrontMapperID() as integer
+dim noof_windows, this_window, found_window_id as integer
+
+noof_windows = NumWindows()
+found_window_id = 0
+for this_window = 1 to noof_windows
+	If WindowInfo(this_window, WIN_INFO_TYPE) = WIN_MAPPER then
+		found_window_id = WindowInfo(this_window, WIN_INFO_WINDOWID)
+	end if
+next
+
+frontMapperID = found_window_id
+
+end function 'FrontMapperID() as integer
+'**********
+'function extract_delimitedlist_item_no(ByVal list_str As String, byval delimiter_str as string, ByVal target_item_no as integer) as string
+'Dim curr_start_pos, curr_end_pos, item_no As Integer
+'
+'  'find the first item
+'  curr_start_pos = 1
+
+'  curr_end_pos = InStr(1, list_str, delimiter_str)
+'
+'  'move through the list looking for the correct item. (If we are after item 1, this won't trigger)
+'  For item_no = 2 To target_item_no
+'    curr_start_pos = curr_end_pos + 1
+'    curr_end_pos = InStr(curr_start_pos, list_str, delimiter_str)
+'  Next
+'    
+'  If curr_end_pos = 0 Then
+'    'we are (probably?) after the last item in the list
+'    curr_end_pos = len(list_str)+1
+'  End If
+'  extract_delimitedlist_item_no = Mid$(list_str, curr_start_pos, curr_end_pos - curr_start_pos)
+'
+'End function 'extract_delimitedlist_item_no
+'*******
+function extract_delimitedlist_item_no(	ByVal list_str As String, 
+							byval delimiter_str as string, 
+							ByVal target_item_no as integer) as string
+'loop through the list looking for the string
+dim start_posn, end_posn as integer
+dim temp_str as string
+
+'find start_posn: first character of item
+if target_item_no = 1 then
+	start_posn = 1
+else
+	start_posn = find_nth_occurrence(list_str, delimiter_str, target_item_no-1)
+	If start_posn <> 0 then
+		'start at the character after the delimiter
+		start_posn = start_posn + 1
+	end if
+end if
+If start_posn <> 0 then
+	'find end_posn: last character of item
+	end_posn = find_nth_occurrence(list_str, delimiter_str, target_item_no)-1
+	if end_posn < 0 then
+		'we are looking for the last item in the list
+		end_posn = len(list_str)
+	end if
+	temp_str = mid$(list_str, start_posn, end_posn-start_posn+1)
+else
+	'there is no item of the specified number
+	temp_str = ""		
+end if
+
+extract_delimitedlist_item_no = temp_str
+
+end function 'extract_delimitedlist_item_no
+'**********8
+function find_nth_occurrence(byval search_string as string, 
+				byval target_string as string, 
+				byval n as integer) as integer
+dim occur_count, temp_posn as integer
+
+temp_posn = 0
+for occur_count = 1 to n
+	'starting at the beginning of the string, look for the next occurrence
+	temp_posn= temp_posn+1
+	temp_posn = Instr(temp_posn, search_string, target_string)
+	if temp_posn = 0 then 
+		exit for
+	end if
+next
+find_nth_occurrence = temp_posn
+
+end function 'find_nth_occurrence
+'************
+function AntiCW_bearing_dec_ll(	byval d_lat1 as float, 
+					byval d_lon1 as float, 
+					byval d_lat2 as float, 
+					byval d_lon2 as float, 
+						bearing as float) as logical
+'taken from http://www.best.com/~williams/avform.htm
+
+dim tc1 as float
+dim r_lat1, r_lat2, r_lon1, r_lon2 as float
+dim mi_d, d, Cos_theta, aCos_theta  as float
+dim tempstatus as logical
+
+OnError goto gen_error
+
+If d_lat1 = -90 then 'starting from S pole
+	tc1 = 0
+elseif d_lat1 = 90 then ' starting from N pole
+	tc1= pi
+else
+	r_lat1 = DEG_2_RAD*d_lat1
+	r_lat2 = DEG_2_RAD*d_lat2
+	r_lon1 = DEG_2_RAD*d_lon1
+	r_lon2 = DEG_2_RAD*d_lon2
+	
+	d = acos(sin(r_lat1)*sin(r_lat2)+cos(r_lat1)*cos(r_lat2)*cos(r_lon1-r_lon2))
+	'print "GC_d = " + d
+	
+	Cos_theta = (sin(r_lat2)-sin(r_lat1)*cos(d))/(sin(d)*cos(r_lat1))
+	'print "cos_theta = " + cos_theta
+	
+	acos_theta = acos(cos_theta)
+	
+	'print "ACos(" + cos_theta + ") = " + aCos_theta
+	
+	IF sin(r_lon2-r_lon1)<0 then
+		tc1=aCos_theta
+	ELSE 
+		tc1=2*pi - acos_theta
+	END IF
+end if
+	
+bearing = RAD_2_DEG*tc1
+tempstatus = True
+
+finish:
+AntiCW_bearing_dec_ll = tempstatus
+exit function
+
+gen_error:
+print "Error #" + err() + " while calculating bearing. Message """ + error$() + """"
+tempstatus = False
+resume finish
+
+end function 'AntiCW_bearing_dec_ll() as float

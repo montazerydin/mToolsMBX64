@@ -1,0 +1,129 @@
+'===============================================================================
+'**
+'**		Author				: Montazery Hasibuan
+'**		Email				: --insert your email here--
+'**
+'**		Filename			: mFunc.mb
+'**		Date Created		: 17 Nov 2010
+'**		Last Modified		: --insert the last date you edited this file--
+'**
+
+'===============================================================================
+
+Include "mDeclare.dcl"
+
+
+'*********************************************************************************************
+'* Function: TableOpen
+'* Purpose:  Accepts Table Name As String AND returns
+'*           Logical Variable TRUE OR FALSE
+
+Function TableOpen(ByVal TabName As String) As Logical
+'*********************************************************************************************
+
+Dim i As SmallInt
+TableOpen = FALSE
+For i = 1 To NumTables()
+   If TableInfo(i,TAB_INFO_NAME) = TabName Then
+      TableOpen = TRUE
+      Exit For
+   End If
+Next
+End Function
+
+'*********************************************************************************************
+Function ExecuteAndWait(ByVal cmdLine as string) as integer
+'*********************************************************************************************
+
+ONERROR GOTO ErrorHandle
+
+Dim nRetVal as integer
+Dim NameOfProc as Process_Information, NameStart as StartUpInfo
+
+NameStart.cb = 256
+NameStart.dwFlags = 1
+NameStart.wShowWindow = 0
+nRetVal = CreateProcessA(0, cmdLine, 0, 0, 1, NORMAL_PRIORITY_CLASS, 0, 0, NameStart, NameOfProc)
+
+nRetVal = NameOfProc.hProcess
+nRetVal = WaitForSingleObject(NameOfProc.hProcess, INFINITE)
+nRetVal = CloseHandle(NameOfProc.hProcess)
+ExecuteAndWait = TRUE
+
+EXIT FUNCTION
+ErrorHandle:
+	ExecuteAndWait = FALSE
+	sErrMsg = Error$()
+	iErr = Err()
+   Print "ExecuteAndWait: " + str$(iErr) + ": " + sErrMsg
+	exit function
+END FUNCTION 'ExecuteAndWait
+
+'******************************************************
+'This Function Trims both sides of the String of All spaces
+'******************************************************
+Function Trim(ByVal theStr As String) As String
+Trim = LTrim$(RTrim$(theStr))
+End Function
+
+'*********************************************************************************************
+
+'CountChar - returns instances of sChar in sStr
+'            only works for single character
+
+Function CountChar(ByVal sStr, ByVal sChar As String,ByVal lCaseSens As Logical) As SmallInt
+'*********************************************************************************************
+
+Dim i,j,k As SmallInt
+k = Asc(sChar)
+For i = 1 To Len(sStr)
+   If lCaseSens Then
+      If Asc(Mid$(sStr,i,1)) = k Then
+         j = j + 1
+      End If
+   Else
+      If Mid$(sStr,i,1) = sChar Then
+         j = j + 1
+      End If
+   End If
+Next
+CountChar = j
+End Function
+
+
+'*********************************************************************************************
+Function Asc2Char() As String
+'*********************************************************************************************
+
+Dim nChar() As Integer
+Dim sChar, sPhar As String
+Dim i, l, m As Integer
+
+ReDim nChar(17)
+
+nChar(1)		= 78
+nChar(2)		= 52
+nChar(3)		= 66
+nChar(4)		= 49
+nChar(5)		= 72
+nChar(6)		= 52
+nChar(7)		= 78
+nChar(8)		= 38
+nChar(9)		= 77
+nChar(10)		= 66
+nChar(11)		= 88
+nChar(12)		= 118
+nChar(13)		= 50
+nChar(14)		= 46
+nChar(15)		= 48
+nChar(16)		= 46
+nChar(17)		= 48
+
+For i = 1 To UBound(nChar)
+ sChar = Chr$(nChar(i))
+ sPhar = sPhar & sChar
+Next
+
+Asc2Char = sPhar
+
+End Function

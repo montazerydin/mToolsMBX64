@@ -1,0 +1,201 @@
+'===============================================================================
+'**
+'**		Author				: Montazery Hasibuan
+'**		Email				: --insert your email here--
+'**
+'**		Filename			: mSortTable.mb
+'**		Date Created		: 17 Nov 2010
+'**		Last Modified		: --insert the last date you edited this file--
+'**
+
+'===============================================================================
+
+Include "mDeclare.dcl"
+
+'*********************************************************************************************
+Sub SortDlg
+'*********************************************************************************************
+
+If NumTables() < 1 Then
+Note "Please open a table."
+Exit Sub
+End If
+
+Dim mSort1, mSort2, mSort3, mSort4 as Integer
+Dim mDesc1, mDesc2, mDesc3, mDesc4 as Logical	
+Dim mChoice1, mChoice2, mChoice3 As Logical
+Dim mQuery as String
+Dim sFile, sFile_tmp as String
+
+		If Not TableOpen(TableSelect) Then
+		iTableName = 1
+		End If
+		
+		sColCall = "addCol"
+    
+Call GetTables  
+Call GetColList
+
+Dialog
+		Title "mSort"
+		Position 500,125
+			Control StaticText Title "Select Table:" Position 3dW, 1dH
+			Control PopUpMenu Title From Variable sTableList into iTableName Value iTableName ID 1 Position 3dW, 2.5dH Width 30dW Calling mSortColList
+			Control StaticText Title "Label Layer by Column:" Position 3dW, 5dH
+			Control StaticText Title "Desc" Position 45dW, 5dH
+			Control CheckBox into mDesc1 ID 2 Position 45dW, 6.5dH Disable Value 0
+			Control StaticText Title "Column #&1:" ID 3 Position 3dW, 6.5dH
+			Control PopUpMenu Title From Variable sColumnList into mSort1 ID 4 Position 14dW, 6.5dH Width 30dW Calling SortDlgPart2
+			Control CheckBox into mDesc2 ID 5 Position 45dW, 8.5dH Disable Value 0
+			Control StaticText Title "Column #&2:" ID 6 Position 3dW, 8.5dH Disable
+			Control PopUpMenu Title From Variable sColumnList into mSort2 ID 7 Position 14dW, 8.5dH Width 30dW Disable Calling SortDlgPart3
+			Control CheckBox into mDesc3 ID 8 Position 45dW, 10.5dH Disable Value 0
+			Control StaticText Title "Column #&3:" ID 9 Position 3dW, 10.5dH Disable
+			Control PopUpMenu Title From Variable sColumnList into mSort3 ID 10 Position 14dW, 10.5dH Width 30dW Disable Calling SortDlgPart4
+			Control CheckBox into mDesc4 ID 11 Position 45dW, 12.5dH Disable Value 0
+			Control StaticText Title "Column #&4:" ID 12 Position 3dW, 12.5dH Disable
+			Control PopUpMenu Title From Variable sColumnList into mSort4 ID 13 Position 14dW, 12.5dH Width 30dW Disable Calling SortDlgPart5
+			Control CheckBox into mChoice1 ID 16 Position 5dW, 15.5dH Disable Value 0 Title "Browse Result"
+			Control CheckBox into mChoice2 ID 17 Position 5dW, 17dH Disable Value 0 Title "Save as New Table(DBF Tab)"
+			Control CheckBox into mChoice3 ID 18 Position 5dW, 18.5dH Disable Value 0 Title "Export to DBF"
+			Control CancelButton Title "Cancel" ID 14 calling cancel_handler
+			Control OKButton Title "Sort" ID 15 Disable ' Position 50dW, 19dH 
+			
+			If CommandInfo(CMD_INFO_DLG_OK)
+				Then
+			mQuery = "Select * from " +  sTableList(iTableName) + " order by " + sColumnList(mSort1)
+			If mDesc1 = 1
+				Then
+					mQuery = mQuery + " desc"
+			End If
+			If mSort2 <> 1
+				Then
+					mQuery = mQuery + ", " + sColumnList(mSort2)
+			End If
+			If mDesc2 = 1
+				Then
+					mQuery = mQuery + " desc"
+			End If
+			If mSort3 <> 1
+				Then
+					mQuery = mQuery + ", " + sColumnList(mSort3)
+			End If
+			If mDesc3 = 1
+				Then
+					mQuery = mQuery + " desc"
+			End If
+			If mSort4 <> 1
+				Then
+					mQuery = mQuery + ", " + sColumnList(mSort4)
+			End If
+			If mDesc4 = 1
+				Then
+					mQuery = mQuery + " desc"
+			End If
+			mQuery = mQuery + " into " + sTableList(iTableName) + "_mSorted Noselect"
+			sFile = TableInfo(sTableList(iTableName), TAB_INFO_TABFILE)
+			sFile_tmp = PathToDirectory$(sFile) + sTableList(iTableName) + "_mSorted.TAB"
+			Run Command mQuery
+			If mChoice1 = 1 Then
+					Browse * from sTableList(iTableName) + "_mSorted"
+				Else
+			End If
+			If mChoice2 = 1 Then
+				Commit Table sTableList(iTableName) + "_mSorted" As sFile_tmp TYPE DBF Charset "WindowsLatin1" 'Interactive
+				Else
+			End if
+			If mChoice3 = 1 Then
+				Export sTableList(iTableName) + "_mSorted" Into PathToDirectory$(sFile) + "Export" + sTableList(iTableName) + ".dbf" Type "DBF" CharSet "WindowsLatin1"
+			Else
+			End If
+
+	End If
+
+End Sub
+
+
+'*********************************************************************************************
+Sub mSortColList
+'*********************************************************************************************
+  
+  iTableName = ReadControlValue(1)
+  Call GetColList
+  
+	Alter Control 4 Title From Variable sColumnList Value 1
+	Alter Control 7 Title From Variable sColumnList Value 1
+	Alter Control 10 Title From Variable sColumnList Value 1
+	Alter Control 13 Title From Variable sColumnList Value 1
+	Call SortDlgPart2
+	
+End Sub
+
+
+'*********************************************************************************************
+Sub	SortDlgPart2
+'*********************************************************************************************
+
+If ReadControlValue(4) <> 1 Then
+	Alter Control 6 Enable
+	Alter Control 7 Enable
+	Alter Control 2 Enable
+	Alter Control 15 Enable
+	Alter Control 16 Enable
+	Alter Control 17 Enable
+	Alter Control 18 Enable
+Else
+	Alter Control 6 Disable
+	Alter Control 7 Disable Value 1
+	Alter Control 2 Disable Value 0
+	Alter Control 15 Disable
+	Alter Control 16 Disable Value 0
+	Alter Control 17 Disable Value 0
+	Alter Control 18 Disable Value 0
+	Call SortDlgPart3
+End If
+End Sub
+
+'*********************************************************************************************
+Sub	SortDlgPart3
+'*********************************************************************************************
+
+If ReadControlValue(7) <> 1 Then
+	Alter Control 9 Enable
+	Alter Control 10 Enable
+	Alter Control 5 Enable
+Else
+	Alter Control 9 Disable
+	Alter Control 10 Disable Value 1
+	Alter Control 5 Disable Value 0
+	Call SortDlgPart4
+End If
+
+End Sub
+
+'*********************************************************************************************
+Sub	SortDlgPart4
+'*********************************************************************************************
+
+If ReadControlValue(10) <> 1 Then
+	Alter Control 12 Enable
+	Alter Control 13 Enable
+	Alter Control 8 Enable
+Else
+	Alter Control 12 Disable
+	Alter Control 13 Disable Value 1
+	Alter Control 8 Disable Value 0
+	Call SortDlgPart5
+End If
+
+End Sub
+
+'*********************************************************************************************
+Sub	SortDlgPart5
+'*********************************************************************************************
+
+If ReadControlValue(13) <> 1 Then
+	Alter Control 11 Enable
+Else
+	Alter Control 11 Disable Value 0
+End If
+
+End Sub

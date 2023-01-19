@@ -1,0 +1,435 @@
+'===============================================================================
+'**
+'**		Author				: Montazery Hasibuan
+'**		Email				: --insert your email here--
+'**
+'**		Filename			: mCAD.mb
+'**		Date Created		: 17 Nov 2010
+'**		Last Modified		: --insert the last date you edited this file--
+'**
+
+'===============================================================================
+
+Include "mDeclare.dcl"
+
+Dim next_row As Integer 
+Dim i_cadrg As Integer
+Dim s_cadED, s_cadED2 As String
+Dim l_cad1, l_cad2 As Logical
+Dim x As Integer
+
+'*********************************************************************************************
+Sub mCAD
+'*********************************************************************************************
+' Dim i_cadrg As Integer
+' Dim s_cadED, s_cadED2 As String
+' Dim l_cad1, l_cad2 As Logical
+
+DIALOG
+    WIDTH 274 HEIGHT 170
+    TITLE "Import Multiple DWG/DXF"
+	CONTROL GroupBox
+      POSITION 4, 3
+      WIDTH 266 HEIGHT 96
+      TITLE "Source File(s):"
+	CONTROL MultiListBox
+      POSITION 8, 15
+      WIDTH 232 HEIGHT 65
+      ID cLB
+	Control StaticText Title "cad" ID 9500 Position 8, 82 Hide
+  Control StaticText
+      Position 8, 82
+      Title "Target Projection :"
+  CONTROL EditText
+      POSITION 68, 82
+      WIDTH 172 HEIGHT 12
+      ID cET2
+      Value "Please select a new projection"
+      INTO s_cadED2
+      Disable
+	CONTROL Button
+      POSITION 242, 81
+      WIDTH 25 HEIGHT 14
+      ID cdBT2
+      TITLE "..."
+      CALLING CADProj
+      Disable
+  CONTROL Button
+      POSITION 242, 15
+      WIDTH 25 HEIGHT 65
+      ID cBT
+      TITLE "->"
+      CALLING SelFileDlg
+  CONTROL GroupBox
+      POSITION 4, 103
+      WIDTH 131 HEIGHT 60
+      TITLE "Target Directory"
+	CONTROL RadioGroup
+      POSITION 8, 115
+      ID cRG
+      TITLE "Source Directory;In Specific Directory"
+      CALLING cadDlg
+      VALUE 1
+      INTO i_cadrg
+	CONTROL EditText
+      POSITION 8, 145
+      WIDTH 100 HEIGHT 12
+      ID cET
+      INTO s_cadED
+      Disable
+	CONTROL Button
+      POSITION 110, 144
+      WIDTH 22 HEIGHT 14
+      ID cdBT
+      TITLE "..."
+      CALLING GetDirectory	
+      Disable
+	CONTROL GroupBox
+      POSITION 139, 103
+      WIDTH 131 HEIGHT 60
+      TITLE "Directory Options"	
+  CONTROL CheckBox
+      POSITION 145, 115
+      WIDTH 113
+      ID cCB
+      TITLE "All in current directory"
+      CALLING cadDlg2
+      VALUE 0
+      INTO l_cad1
+  CONTROL CheckBox
+      POSITION 145, 130
+      WIDTH 110
+      ID cCBX
+      TITLE "Create new directory(s)"
+      CALLING cadDlg3
+      VALUE 1
+      INTO l_cad2
+  CONTROL OKButton
+      POSITION 187, 145
+      WIDTH 38 HEIGHT 14
+      ID cOK
+      CALLING MLBOKButton
+      Disable
+  CONTROL CancelButton
+      POSITION 228, 145
+      WIDTH 38 HEIGHT 14
+   	  
+      
+If CommandInfo(CMD_INFO_DLG_OK) Then
+    
+    ' Print Str$(Ubound(iTableSelArray))
+    next_row = Ubound(iTableSelArray)
+    ' For x = 1 to next_row
+	
+' Next
+
+x = 1
+    ProgressBar "Converting DWG/DXF..." Calling write_out Range next_row
+    If CommandInfo(CMD_INFO_STATUS) Then 
+		Note "Operation complete! Thanks for waiting." 
+	Else
+		Note "Operation interrupted!" 
+	End If
+End If
+End Sub
+
+'*********************************************************************************************
+Sub SelFileDlg
+'*********************************************************************************************
+Dim sFileTypes, sFilePath As String
+Dim nNumFiles, i, m As Integer
+
+OnError GoTo ErrorOccured
+
+sFileTypes = "AutoCAD DWG (*.dwg)|*.dwg|AutoCAD DXF (*.dxf)|*.dxf"
+
+nNumFiles = FILEOpenFilesDlg("Select AutoCAD files to Import", "", sFileTypes)
+If nNumFiles = 0 Then
+Exit Sub
+End If
+
+Redim arrFilePaths(nNumFiles)
+If FILEGetOpenFilesDlgFileNames(arrFilePaths) = 0 Then
+Exit Sub
+End If
+Redim sCadName(nNumFiles)
+For m = 1 to nNumFiles
+sCadName(m) = PathToFileName$(arrFilePaths(m))
+Next
+Alter Control cLB Title From Variable sCadName
+For nCAD = 1 to Ubound(arrFilePaths)
+Alter Control cLB Value nCAD
+Next
+' Alter Control cLB Disable
+Alter Control cdBT2 Enable
+' For i = 1 To nNumFiles
+' Print i & ": " & arrFilePaths(i)
+' Next
+
+Exit Sub
+'-------------------------
+ErrorOccured:
+Note Err() & " " & Error$()
+End Sub
+
+'*********************************************************************************************
+Sub cadDlg
+'*********************************************************************************************
+If ReadControlValue(cRG) = 2 Then
+  Alter Control cET Enable Value ""
+  Alter Control cdBT Enable
+  Else
+  Alter Control cET Disable Value ""
+  Alter Control cdBT Disable
+End If 
+
+End Sub
+
+Sub cadDlg2
+
+If ReadControlValue(cCB) = 1 Then
+Alter Control cCBX Value 0
+End If
+
+End Sub
+
+'*********************************************************************************************
+Sub cadDlg3
+'*********************************************************************************************
+If ReadControlValue(cCBX) = 1 Then
+Alter Control cCB Value 0
+End If
+
+End Sub
+
+
+'*********************************************************************************************
+Sub CADProj
+'*********************************************************************************************
+
+sProjList = ChooseProjection$("", TRUE)
+
+If sProjList = "" Then
+	sProjName = ""
+	Note "Anda tidak memilih Sistem Koordinat!"
+	Exit Sub
+'	Call ReProjTab
+Else
+sProjName = CoordSysName$(sProjList)
+Alter Control cET2 Value sProjName
+Alter Control cOK Enable
+End If
+End Sub
+
+'*********************************************************************************************
+Sub write_out
+'*********************************************************************************************
+
+Dim start_time As Float 
+  
+' Dim iRG As Integer
+' Dim sED As String
+' Dim lCD1, lCD2 As Logical
+
+Dim k As Integer
+Dim cExt, cName, cNameTr, cLayerName As String
+Dim cPath, cPath2 As String
+
+Dim fmefile, fmerun As String
+Dim utDir, myDir As String
+
+Dim cQry, cQry2 As String
+Dim cRun, cRun2, cRun3, cRun4, cRun5, cRun6 As String
+
+Dim sMICoordSys As String
+
+Dim CreateDir, DirName As String
+
+dim tSecurity as SECURITY_ATTRIBUTES
+dim nStatus as integer
+tSecurity.nLength = 24 'Size of this structure in bytes, but you
+'can get away with using 0 in place of the
+'tSecurity parameter as Win3.1 and Win95
+'seem to ignore it anyway.
+
+	start_time = Timer( )
+	
+' x = 1
+    gMUTDir = ProgramDirectory$()+ "UT\"
+    utDir = ProgramDirectory$() + "UT\Imut.exe"
+    myDir = GetFolderPath$(FOLDER_MYDOCS)
+
+    cQry = utDir + " CFGenerate autocadScan MAPINFO"
+
+    cQry2 = " """ + myDir + "\mapping.fme""" + " LOG_STANDARDOUT YES LOG_FILENAME """ + myDir + "\mutlog.txt"" LOG_APPEND ""NO"" --Source_EXPAND_BLOCKS ""yes"" --Source_ATTR ""autocad_attributes"" --Source_ATTRKIND ""extended_entity_data"" --LAYERBASENAME "
+ 
+    cRun = utDir + " """ + myDir + "\mapping.fme"" --SourceDataset"
+
+    cRun2 = " --DestDataset "
+
+    cRun3 = " --_EXPAND_BLOCKS yes --_ATTRKIND extended_entity_data --_EXTENSION "
+    
+    cRun4 = " --_BASENAME "
+    
+    cRun5 = " --_FULLBASENAME "
+    
+    cRun6 = " MAPINFO_COORDSYS_STATEMENT "
+    
+    sMICoordSys = "CoordSys Earth Projection 8, 104," + chr$(92) + chr$(34) + "m" + chr$(92)+ chr$(34)+ ", 117, 0, 0.9996, 500000, 0 Bounds (-7745844.29597,-9997964.94324) (8745844.29597,9997964.94324)"
+    
+
+Do While x <= next_row And Timer() - start_time < 2
+
+	Dim sCadfile As String
+		Dim sCadinput As String
+		sCadfile = TrueFileName$(arrFilePaths(x)) 
+		Open File sCadfile For Input As #1
+		Line Input #1, sCadinput
+		sCadinput = Left$(sCadinput, 6)
+		Close File #1
+
+		If sCadinput = "AC1024" Then
+		Print arrFilePaths(x) + " is an unsupported version of DWG/DXF file."
+		Goto nextrow
+		Else
+		End If
+		
+' For x = 1 to next_row And Timer() - start_time < 5 
+ If i_cadrg = 1 Then
+    ' Call SetUTDirectory(gMUTDir)
+      ' For k = 1 to Ubound(iTableSelArray)
+        cPath = PathToDirectory$(arrFilePaths(x))
+        cPath2 = Mid$(cPath, 1, Len(cPath)-1)
+        cExt = Right$(sCadName(x), 3)
+        cName = Mid$(sCadName(x), 1, Len(sCadName(x))-4)
+        cNameTr = Trim(cName)
+        Call ScoreNonAlpha(cNameTr)
+
+        cLayerName = cNameTr + "_"
+          If l_cad1 = 1 Then
+          
+            fmefile = cQry + " """ + arrFilePaths(x) + """" + cQry2 + """" + cLayerName + """"
+            ' Print fmefile
+              If ExecuteAndWait(fmefile) = TRUE then
+              Else
+                Print "Execute & Wait failed during semantic mapping file creation"
+              End if
+              
+            fmerun = cRun + " """ + arrFilePaths(x) + """" + cRun2 + """" + cPath2 + """" + cRun3 + cExt + cRun4 + cLayerName + cRun5 + cLayerName + cRun6 + chr$(34) + sProjList + chr$(34)
+            ' Print fmerun
+            if FileExists(myDir + "\mapping.fme") then
+                If ExecuteAndWait(fmerun) = TRUE then
+                Else
+                  Print "Execute & Wait failed during Actual Translation"
+                End if
+              Else
+                Print "Mapping file cound not be found"
+                Exit Sub
+            End if
+            
+          ElseIf l_cad2 = 1 Then
+            
+            DirName =  cPath+cNameTr
+            CreateDir = CreateDirectory32(DirName, tSecurity)
+                       
+            fmefile = cQry + " """ + arrFilePaths(x) + """" + cQry2 + """" + cLayerName + """"
+            ' Print fmefile
+              If ExecuteAndWait(fmefile) = TRUE then
+              Else
+                Print "Execute & Wait failed during semantic mapping file creation"
+              End if
+             
+            fmerun = cRun + " """ + arrFilePaths(x) + """" + cRun2 + """" + DirName + """" + cRun3 + cExt + cRun4 + cLayerName + cRun5 + cLayerName + cRun6 + chr$(34) + sProjList + chr$(34)
+            ' Print fmerun 
+            if FileExists(myDir + "\mapping.fme") then
+                If ExecuteAndWait(fmerun) = TRUE then
+                Else
+                  Print "Execute & Wait failed during Actual Translation"
+                End if
+              Else
+                Print "Mapping file cound not be found"
+                Exit Sub
+            End if
+            
+          End If
+      ' Next
+      
+    Else
+    ' Call SetUTDirectory(gMUTDir)
+        ' For k = 1 to Ubound(iTableSelArray)
+          cPath = PathToDirectory$(arrFilePaths(x))
+          cExt = Right$(sCadName(x), 3)
+          cName = Mid$(sCadName(x), 1, Len(sCadName(x))-4)
+          cNameTr = Trim(cName)
+          Call ScoreNonAlpha(cNameTr)
+          cLayerName = cNameTr + "_"
+            If l_cad1 = 1 Then
+              
+              If s_cadED <> "" Then
+                cPath = s_cadED             
+              End If
+              
+              fmefile = cQry + " """ + arrFilePaths(x) + """" + cQry2 + """" + cLayerName + """"
+            ' Print fmefile
+              If ExecuteAndWait(fmefile) = TRUE then
+              Else
+                Print "Execute & Wait failed during semantic mapping file creation"
+              End if
+              
+            fmerun = cRun + " """ + arrFilePaths(x) + """" + cRun2 + """" + cPath + """" + cRun3 + cExt + cRun4 + cLayerName + cRun5 + cLayerName + cRun6 + chr$(34) + sProjList + chr$(34)
+            ' Print fmerun
+            if FileExists(myDir + "\mapping.fme") then
+                If ExecuteAndWait(fmerun) = TRUE then
+                Else
+                  Print "Execute & Wait failed during Actual Translation"
+                End if
+              Else
+                Print "Mapping file cound not be found"
+                Exit Sub
+            End if
+            
+            ElseIf l_cad2 = 1 Then
+            
+              If s_cadED <> "" Then
+                cPath = s_cadED             
+              End If
+              
+            DirName =  cPath+"\"+cName
+            CreateDir = CreateDirectory32(DirName, tSecurity)
+                       
+            fmefile = cQry + " """ + arrFilePaths(x) + """" + cQry2 + """" + cLayerName + """"
+            ' Print fmefile
+              If ExecuteAndWait(fmefile) = TRUE then
+              Else
+                Print "Execute & Wait failed during semantic mapping file creation"
+              End if
+             
+            fmerun = cRun + " """ + arrFilePaths(x) + """" + cRun2 + """" + DirName + """" + cRun3 + cExt + cRun4 + cLayerName + cRun5 + cLayerName + cRun6 + chr$(34) + sProjList + chr$(34)
+            ' Print fmerun 
+            if FileExists(myDir + "\mapping.fme") then
+                If ExecuteAndWait(fmerun) = TRUE then
+                Else
+                  Print "Execute & Wait failed during Actual Translation"
+                End if
+              Else
+                Print "Mapping file cound not be found"
+                Exit Sub
+            End if
+            
+              ' Print cQry + " """ + arrFilePaths(k) + """" + cQry2 + """" + cName + """"
+              ' Print cRun + " """ + arrFilePaths(k) + """" + cRun2 + """" + cPath + """" + cRun3 + cExt + cRun4 + cName + cRun5 + cName + cRun6 + sProjList
+            End If
+        ' Next         
+    End If
+nextrow:
+x = x + 1 
+	Loop
+' Next
+  
+    If x > next_row Then
+		ProgressBar = -1 	'tell caller "All Done!" 
+	Else
+		ProgressBar = x 	'tell caller "Partly done"
+	End If 
+  
+End Sub

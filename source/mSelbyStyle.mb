@@ -1,0 +1,902 @@
+'===============================================================================
+'**
+'**		Author				: Montazery Hasibuan
+'**		Email				: --insert your email here--
+'**
+'**		Filename			: mSelbyStyle.mb
+'**		Date Created		: 17 Nov 2010
+'**		Last Modified		: --insert the last date you edited this file--
+'**
+
+'===============================================================================
+
+Include "mDeclare.dcl"
+
+'*********************************************************************************************
+Sub ButtonHandler 
+'*********************************************************************************************
+
+  Dim i_open As Integer       ' number of open tables 
+  Dim object_name As String   ' "Line", "Region" etc.
+  Dim table_name As String    ' name of table being used
+  Dim s_type As String        ' "Point", "Line", "Area", or "Text" 
+  Dim sym_style As Symbol
+  Dim pen_style As Pen 
+  Dim bpen_style As Pen 
+  Dim bru_style As Brush 
+  Dim fon_style As Font 
+
+  ' Note how many tables are open initially 
+  i_open = NumTables() 
+
+  ' Determine the name of the table in use 
+  table_name = SelectionInfo(SEL_INFO_TABLENAME) 
+
+  If table_name = "" Then 
+    '... then nothing is selected... 
+    Call HowTo() 
+    Exit Sub 
+  End If 
+
+  ' Exit if the selection is in a non-mappable table. 
+  If Not TableInfo(table_name, TAB_INFO_MAPPABLE) Then 
+    Call HowTo() 
+    Exit Sub 
+  End If 
+
+  ' Exit if selection is not exactly one object. 
+  If SelectionInfo(SEL_INFO_NROWS) <> 1  Then 
+    Call HowTo() 
+    Exit Sub 
+  End If 
+  
+  ' Determine type of object selected.  
+  Fetch First From Selection 
+  object_name = Str$(Selection.obj) 
+  Do Case object_name 
+    Case "Point" 
+      sym_style = ObjectInfo(Selection.obj, OBJ_INFO_SYMBOL)
+      s_type = "Point" 
+
+    Case "Line", "Polyline", "Arc" 
+      pen_style = ObjectInfo(Selection.obj, OBJ_INFO_PEN) 
+      s_type = "Line" 
+
+    Case "Region", "Rectangle", "Rounded Rectangle", "Ellipse"
+      bru_style = ObjectInfo(Selection.obj, OBJ_INFO_BRUSH)
+			bpen_style = ObjectInfo(Selection.obj, OBJ_INFO_PEN)
+      s_type = "Area" 
+
+    Case "Text" 
+      fon_style = ObjectInfo(Selection.obj, OBJ_INFO_TEXTFONT)
+      s_type = "Text" 
+  
+    Case Else 
+      Call HowTo() 
+   End Case 
+
+  'Accessing Selection.obj  may have caused MapInfo to 
+  ' open a temporary table such as Query1.  
+  ' Let's close that table, to be tidy. 
+  If Numtables()  > i_open  Then 
+     Close Table TableInfo(0, TAB_INFO_NAME) 
+  End If 
+
+  Do Case s_type 
+    Case "Point" 
+      Call Handle_Points(table_name, sym_style)
+    Case "Line" 
+      Call Handle_Lines(table_name, pen_style)
+    Case "Area" 
+      Call Handle_Areas(table_name, bru_style, bpen_style)
+    Case "Text" 
+      Call Handle_Text(table_name, fon_style)
+  End Case 
+End Sub 
+
+
+'*********************************************************************************************
+Sub HowTo() 
+'*********************************************************************************************
+    Note "To use the this tool, select ONE map feature in a mappable " 
+       + "table or Layout." 
+End Sub 
+
+
+'*********************************************************************************************
+Sub Handle_Lines(ByVal table_name As String, ByVal pstyle As Pen) 
+'*********************************************************************************************
+
+  Dim i_feature_type As Integer 
+  Dim i_color, i_pattern, i_width As Logical   
+  Dim s_part1, s_part2, s_part3 As String 
+  Dim s_oldcolor, s_oldwidth, s_oldpattern  As String 
+  Dim l_multiple As Logical 
+
+  i_color = FALSE
+  i_pattern = FALSE
+  i_width = FALSE 
+
+  Dialog
+    Title "Select Lines by Style" 
+    Width 200 
+    Control StaticText 
+      Title "Style of selected object: " + pstyle   Position 5, 5  
+
+    Control StaticText Title "Select all " Position 5, 20
+
+    Control PopupMenu 
+      Title "Lines;Polylines;Arcs;Lines, Polylines or Arcs" Position 45, 20
+      Value 4
+      Into i_feature_type 
+
+    Control GroupBox 
+      Title "Select Features With Matching"   Position 5, 35  Width 189  Height 45
+            
+    Control CheckBox 
+      Title "Thickness"  Position 10, 48
+      Value TRUE 
+      Into i_width  
+
+    Control CheckBox 
+      Title "Pattern"  Position 10, 58
+      Value TRUE 
+      Into i_pattern  
+
+   Control CheckBox 
+      Title "Color"  Position 10, 68 
+      Value TRUE
+      Into i_color 
+            
+    Control OKButton   'Position  25 + shift_ok, 90
+    Control Button  Title "Cancel"  'Position 25 + shift_cancel, 90
+      Calling UserCanceled  
+
+  If CommandInfo(CMD_INFO_DLG_OK)  Then 
+    '... then the user clicked OK; proceed with the query. 
+
+    s_part1 = "Select * From " + table_name 
+
+    Do Case i_feature_type 
+      Case 1
+        s_part2 = " Where Str$(obj) = ""Line"" "
+      Case 2 
+        s_part2 = " Where Str$(obj) = ""Polyline"" " 
+      Case 3 
+        s_part2 = " Where Str$(obj) = ""Arc"" " 
+      Case 4 
+        s_part2 = 
+  " Where Str$(obj) =""Line"" Or Str$(obj)=""Arc"" Or Str$(obj) = ""Polyline"" " 
+
+    End Case 
+
+    If  i_color  Or  i_pattern  Or  i_width  Then 
+      s_part3 = "Into  Stylist_Temp_Query   NoSelect" 
+    Else 
+      s_part3 = "Into  Selection" 
+    End If  
+    
+    ' Issue a Select statement to select the appropriate type of features. 
+    Run Command  s_part1 + s_part2 + s_part3 
+
+    ' If the user left at least one of the check boxes checked, 
+    ' then we need to do another selection to select only the 
+    ' appropriate objects.  
+    If i_color  Or  i_pattern  Or  i_width  Then 
+      s_oldcolor   = Str$(StyleAttr(pstyle,PEN_COLOR))
+      s_oldpattern = Str$(StyleAttr(pstyle,PEN_PATTERN))
+      s_oldwidth   = Str$(StyleAttr(pstyle,PEN_WIDTH))
+
+      s_part1 = "Select * From Stylist_Temp_Query " 
+      s_part2 = " Where "
+      l_multiple = FALSE
+      If  i_color  Then 
+        s_part2 = s_part2 + "StyleAttr(ObjectInfo(obj,2),4) = " + s_oldcolor + " " 
+        l_multiple = TRUE 
+      End If 
+      
+      If  i_pattern  Then 
+        If l_multiple Then 
+          s_part2 = s_part2 + " And " 
+        End If 
+        s_part2 = s_part2 + "StyleAttr(ObjectInfo(obj,2),2) = "  + s_oldpattern + " "
+        l_multiple = TRUE 
+      End If 
+      
+      If  i_width  Then 
+        If l_multiple Then 
+          s_part2 = s_part2 + " And " 
+        End If 
+        s_part2 = s_part2 + "StyleAttr(ObjectInfo(obj,2),1) =" + s_oldwidth  +  " "
+      End If 
+      s_part3 = " Into Selection" 
+      Run Command s_part1 + s_part2 + s_part3
+    End If 
+
+  End If  
+
+End Sub
+
+
+
+'*********************************************************************************************
+Sub Handle_Areas(ByVal table_name As String, ByVal bstyle As Brush, ByVal pstyle As Pen) 
+'*********************************************************************************************
+
+  Dim i_feature_type As Integer 
+  Dim i_fg_color, i_bg_color, i_pattern, i_l_color, i_l_pattern, i_l_width As Logical   
+  Dim s_part1, s_part2, s_part3 As String 
+  Dim s_old_fg_color, s_old_bg_color, s_oldpattern, s_old_lcolor, s_old_lpattern, s_old_lwidth  As String 
+  Dim l_multiple As Logical 
+
+  i_fg_color = FALSE
+  i_bg_color = FALSE
+  i_pattern = FALSE
+
+  Dialog
+    Title "Select Regions by Style" 
+    Width 200 
+    Control StaticText 
+      Title "Style of selected object: " + bstyle   Position 5, 5  
+
+    Control StaticText Title "Select all " Position 5, 20
+
+    Control PopupMenu 
+      Title "Regions;Ellipses;Rectangles;Regions,Ellipses or Rectangles" Position 45, 20
+      Value 4
+      Into i_feature_type 
+
+    Control GroupBox 
+      Title "Select Features With Matching"   Position 5, 35  Width 189  Height 90
+
+    Control CheckBox 
+      Title "Pattern"  Position 10, 48
+      Value TRUE 
+      Into i_pattern  
+
+    Control CheckBox 
+      Title "Foreground Color"  Position 10, 58 
+      Value TRUE
+      Into i_fg_color 
+
+    Control CheckBox 
+      Title "Background Color"  Position 10, 68 
+      Value TRUE
+      Into i_bg_color 
+
+    Control CheckBox 
+      Title "Line Color"  Position 10, 88
+      Value TRUE 
+      Into i_l_color  
+
+    Control CheckBox 
+      Title "Line Pattern"  Position 10, 98 
+      Value TRUE
+      Into i_l_pattern 
+
+    Control CheckBox 
+      Title "Line Width"  Position 10, 108 
+      Value TRUE
+      Into i_l_width
+      
+    Control OKButton   'Position  25 + shift_ok, 90 
+    Control Button  Title "Cancel"  'Position 25 + shift_cancel, 90
+      Calling UserCanceled  
+
+  If CommandInfo(CMD_INFO_DLG_OK)  Then 
+    '... then the user clicked OK; proceed with the query. 
+
+    s_part1 = "Select * From " + table_name 
+
+    Do Case i_feature_type 
+      Case 1
+        s_part2 = " Where Str$(obj) = ""Region"" "
+      Case 2 
+        s_part2 = " Where Str$(obj) = ""Ellipse"" " 
+      Case 3 
+        s_part2 = " Where Str$(obj) = ""Rectangles"" Or Str$(obj) = ""Rounded Rectangle"" " 
+      Case 4 
+        s_part2 = " Where Str$(obj) =""Region"" Or Str$(obj)=""Ellipse"" Or "   
+                 + " Str$(obj) = ""Rectangle""  Or Str$(obj) = ""Rounded Rectangle""  " 
+
+    End Case 
+
+    If  i_fg_color  Or  i_bg_color  Or  i_pattern  Then 
+      s_part3 = "Into  Stylist_Temp_Query   NoSelect" 
+    Else 
+      s_part3 = "Into  Selection" 
+    End If  
+    
+    ' Issue a Select statement to select the appropriate type of area features. 
+    Run Command  s_part1 + s_part2 + s_part3 
+
+    ' If the user left at least one of the check boxes checked, 
+    ' then we need to do another selection to select only the 
+    ' appropriate objects.  
+    If i_fg_color  Or  i_bg_color  Or  i_pattern  Then 
+      s_old_fg_color  = Str$(StyleAttr(bstyle,BRUSH_FORECOLOR))
+      s_old_bg_color  = Str$(StyleAttr(bstyle,BRUSH_BACKCOLOR))
+      s_oldpattern    = Str$(StyleAttr(bstyle,BRUSH_PATTERN))
+			s_old_lcolor		= Str$(StyleAttr(pstyle,PEN_COLOR))
+			s_old_lpattern	= Str$(StyleAttr(pstyle,PEN_PATTERN))
+			s_old_lwidth		= Str$(StyleAttr(pstyle,PEN_WIDTH))
+
+      s_part1 = "Select * From Stylist_Temp_Query " 
+      s_part2 = " Where "
+      l_multiple = FALSE
+
+      If  i_fg_color  Then 
+        s_part2 = s_part2 + "StyleAttr(ObjectInfo(obj,3),2) = " + s_old_fg_color + " " 
+        l_multiple = TRUE 
+      End If 
+      
+      If  i_bg_color  Then 
+        If l_multiple Then 
+          s_part2 = s_part2 + " And " 
+        End If 
+        s_part2 = s_part2 + "StyleAttr(ObjectInfo(obj,3),3) = " + s_old_bg_color + " " 
+        l_multiple = TRUE 
+      End If 
+      
+      If  i_pattern  Then 
+        If l_multiple Then 
+          s_part2 = s_part2 + " And " 
+        End If 
+        s_part2 = s_part2 + "StyleAttr(ObjectInfo(obj,3),1) = "  + s_oldpattern + " "
+      End If 
+      
+			If  i_l_color  Then 
+        If l_multiple Then 
+          s_part2 = s_part2 + " And " 
+        End If 
+        s_part2 = s_part2 + "StyleAttr(ObjectInfo(obj,2),4) = "  + s_old_lcolor + " "
+      End If 
+			
+			If  i_l_pattern  Then 
+        If l_multiple Then 
+          s_part2 = s_part2 + " And " 
+        End If 
+        s_part2 = s_part2 + "StyleAttr(ObjectInfo(obj,2),2) = "  + s_old_lpattern + " "
+      End If 
+			
+			If  i_l_width  Then 
+        If l_multiple Then 
+          s_part2 = s_part2 + " And " 
+        End If 
+        s_part2 = s_part2 + "StyleAttr(ObjectInfo(obj,2),1) = "  + s_old_lwidth + " "
+      End If 
+      s_part3 = " Into Selection" 
+
+      Run Command s_part1 + s_part2 + s_part3
+    End If 
+  End If  
+End Sub
+
+
+'*********************************************************************************************
+Sub Handle_Points(ByVal table_name As String, ByVal sstyle As Symbol) 
+'*********************************************************************************************
+  Dim i As Integer 
+
+  i = StyleAttr(sstyle, SYMBOL_KIND) 
+  Do Case i
+    Case 1 
+      Call Handle_mi3_Points(table_name, sstyle)
+    Case 2 
+      Call Handle_truetype_Points(table_name, sstyle) 
+    Case 3 
+      Call Handle_bitmap_Points(table_name, sstyle) 
+    Case Else
+      Note "Unable to recognize that type of symbol." 
+  End Case
+End Sub 
+
+
+'*********************************************************************************************
+Sub Handle_bitmap_Points(ByVal table_name As String, ByVal sstyle As Symbol)
+'*********************************************************************************************
+
+  Dim i_filename, i_color, i_size, i_style As Logical   
+  Dim s_part1, s_part2, s_part3 As String 
+  Dim s_oldfilename, s_oldcolor, s_oldsize, s_oldstyle  As String 
+  Dim l_multiple As Logical 
+
+  Dialog
+    Title "Select Symbols by Style" 
+    Width 200 
+    Control StaticText 
+      Title "Style of selected object (Custom/Bitmap Symbol): "  Position 5, 5  
+
+    Control StaticText
+      Title Str$(sstyle)  Position 20, 18   Width  140  Height 22
+
+    Control GroupBox 
+      Title "Select Points With Matching"   Position 5, 45  Width 189  Height 55
+            
+    Control CheckBox 
+      Title "Filename"  Position 10, 58
+      Value FALSE
+      Disable  
+      Into i_filename  
+
+    Control CheckBox 
+      Title "Color"  Position 10, 68
+      Value TRUE 
+      Into i_color  
+
+   Control CheckBox 
+      Title "Size"  Position 10, 78 
+      Value TRUE
+      Into i_size 
+            
+   Control CheckBox 
+      Title "Style (Apply Color, Show Background)"  Position 10, 88 
+      Value TRUE
+      Into i_style 
+
+    Control OKButton  ' Position  25 + shift_ok, 110
+    Control Button  Title "Cancel"  Calling UserCanceled   'Position 25 + shift_cancel, 110   
+
+  If CommandInfo(CMD_INFO_DLG_OK)  Then 
+    '... then the user clicked OK; proceed with the query. 
+
+    s_part1 = "Select * From " + table_name 
+
+    s_part2 = " Where Str$(obj) = ""Point"" " 
+
+    If  i_filename  Or  i_color  Or  i_size  Or i_style  Then 
+      s_part3 = " Into  Stylist_Temp_Query   NoSelect" 
+    Else 
+      s_part3 = " Into  Selection" 
+    End If  
+    
+    ' Issue a Select statement to select the appropriate type of features. 
+    Run Command  s_part1 + s_part2 + s_part3 
+
+    ' If the user left at least one of the check boxes checked, 
+    ' then we need to do another selection to select only the 
+    ' appropriate objects.  
+    If  i_filename  Or  i_color  Or  i_size  Or i_style  Then 
+
+      s_oldfilename = Str$(StyleAttr(sstyle,SYMBOL_CUSTOM_NAME))
+      s_oldcolor    = Str$(StyleAttr(sstyle,SYMBOL_COLOR))
+      s_oldsize     = Str$(StyleAttr(sstyle,SYMBOL_POINTSIZE))
+      s_oldstyle    = Str$(StyleAttr(sstyle,SYMBOL_CUSTOM_STYLE))
+
+      s_part1 = "Select * From Stylist_Temp_Query " 
+      s_part2 = " Where "
+      l_multiple = FALSE
+      If  i_filename  Then 
+        'In the next line, the magic # 8 means: SYMBOL_CUSTOM_NAME 
+        s_part2 = s_part2 + "StyleAttr(ObjectInfo(obj,2),8) = "
+                 + Chr$(34) + s_oldfilename + Chr$(34) + " " 
+        l_multiple = TRUE 
+      End If 
+      
+      If  i_color  Then 
+        If l_multiple Then 
+          s_part2 = s_part2 + " And " 
+        End If 
+        'In the next line, the magic # 2 means: SYMBOL_COLOR 
+        s_part2 = s_part2 + "StyleAttr(ObjectInfo(obj,2),2) = "  + s_oldcolor + " "
+        l_multiple = TRUE 
+      End If 
+
+      If  i_size  Then 
+        If l_multiple Then 
+          s_part2 = s_part2 + " And " 
+        End If 
+        'In the next line, the magic # 3 means: SYMBOL_POINTSIZE 
+        s_part2 = s_part2 + "StyleAttr(ObjectInfo(obj,2),3) =" + s_oldsize  +  " "
+        l_multiple = TRUE 
+      End If 
+
+      If  i_style  Then 
+        If l_multiple Then 
+          s_part2 = s_part2 + " And " 
+        End If 
+        'In the next line, the magic # 9 means: SYMBOL_CUSTOM_STYLE 
+        s_part2 = s_part2 + "StyleAttr(ObjectInfo(obj,2),9) =" + s_oldstyle  +  " "
+      End If 
+
+      s_part3 = " Into Selection" 
+      Run Command s_part1 + s_part2 + s_part3
+    End If 
+
+  End If  
+End Sub 
+
+
+'*********************************************************************************************
+Sub Handle_truetype_Points(ByVal table_name As String, ByVal sstyle As Symbol)
+'*********************************************************************************************
+
+  Dim i_color, i_shape, i_size As Logical  
+  Dim i_fontname, i_fontstyle, i_rotation As Logical 
+ 
+  Dim s_part1, s_part2, s_part3 As String 
+  Dim s_oldcolor, s_oldsize, s_oldshape  As String
+  Dim s_oldfontname, s_oldfontstyle, s_oldrotation As String  
+  
+  Dim l_multiple As Logical 
+
+  Dialog
+    Title "Select Points by Style" 
+    Width 200 
+    Control StaticText 
+      Title "Style of selected object (TrueType Symbol): "  Position 5, 5  
+
+    Control StaticText
+      Title Str$(sstyle)  Position 20, 18   Width  140  Height 22
+
+    Control GroupBox 
+      Title "Select Points With Matching"   Position 5, 45  Width 189  Height 80
+            
+    Control CheckBox 
+      Title "Shape"  Position 10, 58
+      Value TRUE 
+      Into i_shape  
+
+    Control CheckBox 
+      Title "Color"  Position 10, 68
+      Value TRUE 
+      Into i_color  
+
+   Control CheckBox 
+      Title "Size"  Position 10, 78 
+      Value TRUE
+      Into i_size 
+            
+    Control CheckBox 
+      Title "Fontname"  Position 10, 88
+      Value FALSE
+      Disable  
+      Into i_fontname  
+
+    Control CheckBox 
+      Title "Fontstyle (bold, halo, etc.)"  Position 10, 98
+      Value TRUE 
+      Into i_fontstyle  
+
+   Control CheckBox 
+      Title "Rotation"  Position 10, 108 
+      Value TRUE
+      Into i_rotation 
+            
+    Control OKButton   'Position  25 + shift_ok, 130
+    Control Button  Title "Cancel"  Calling UserCanceled  'Position 25 + shift_cancel, 130    
+
+  If CommandInfo(CMD_INFO_DLG_OK)  Then 
+    '... then the user clicked OK; proceed with the query. 
+
+    s_part1 = "Select * From " + table_name 
+
+    s_part2 = " Where Str$(obj) = ""Point"" " 
+
+    If  i_shape Or i_color Or i_size Or i_fontname Or i_fontstyle Or i_rotation Then 
+      s_part3 = " Into  Stylist_Temp_Query   NoSelect" 
+    Else 
+      s_part3 = " Into  Selection" 
+    End If  
+    
+    ' Issue a Select statement to select the appropriate type of features. 
+    Run Command  s_part1 + s_part2 + s_part3 
+
+    ' If the user left at least one of the check boxes checked, 
+    ' then we need to do another selection to select only the 
+    ' appropriate objects.  
+    If i_shape Or i_color Or i_size Or i_fontname Or i_fontstyle Or i_rotation Then 
+      s_oldcolor     = Str$(StyleAttr(sstyle,SYMBOL_COLOR))
+      s_oldshape     = Str$(StyleAttr(sstyle,SYMBOL_CODE))
+      s_oldsize      = Str$(StyleAttr(sstyle,SYMBOL_POINTSIZE))
+      s_oldfontname  = Str$(StyleAttr(sstyle,SYMBOL_FONT_NAME)) 
+      s_oldfontstyle = Str$(StyleAttr(sstyle,SYMBOL_FONT_STYLE))
+      s_oldrotation  = Str$(StyleAttr(sstyle,SYMBOL_ANGLE))
+
+      s_part1 = "Select * From Stylist_Temp_Query " 
+      s_part2 = " Where "
+      l_multiple = FALSE
+      If  i_color  Then 
+        s_part2 = s_part2 + "StyleAttr(ObjectInfo(obj,2),2) = " + s_oldcolor + " " 
+        l_multiple = TRUE 
+      End If 
+      
+      If  i_shape  Then 
+        If l_multiple Then 
+          s_part2 = s_part2 + " And " 
+        End If 
+        ' In the next line, the magic # 1  represents SYMBOL_CODE 
+        s_part2 = s_part2 + "StyleAttr(ObjectInfo(obj,2),1) = "  + s_oldshape + " "
+        l_multiple = TRUE 
+      End If 
+      
+      If  i_size  Then 
+        If l_multiple Then 
+          s_part2 = s_part2 + " And " 
+        End If 
+        ' In the next line, the magic # 3  represents SYMBOL_POINTSIZE
+        s_part2 = s_part2 + "StyleAttr(ObjectInfo(obj,2),3) =" + s_oldsize  +  " "
+        l_multiple = TRUE 
+      End If 
+
+      If  i_fontname  Then 
+        If l_multiple Then 
+          s_part2 = s_part2 + " And " 
+        End If 
+        ' In the next line, the magic # 5  represents SYMBOL_FONT_NAME
+        s_part2 = s_part2 + "StyleAttr(ObjectInfo(obj,2),5) = " 
+                 + Chr$(34) + s_oldfontname + Chr$(34) + " "
+        l_multiple = TRUE 
+      End If 
+      
+      If  i_fontstyle  Then 
+        If l_multiple Then 
+          s_part2 = s_part2 + " And " 
+        End If 
+        ' In the next line, the magic # 6  represents SYMBOL_FONT_STYLE 
+        s_part2 = s_part2 + "StyleAttr(ObjectInfo(obj,2),6) = "  + s_oldfontstyle + " "
+        l_multiple = TRUE 
+      End If 
+      
+      If  i_rotation  Then 
+        If l_multiple Then 
+          s_part2 = s_part2 + " And " 
+        End If 
+        ' In the next line, the magic # 4  represents SYMBOL_ANGLE
+        s_part2 = s_part2 + "StyleAttr(ObjectInfo(obj,2),4) = "  + s_oldrotation + " "
+      End If 
+
+      s_part3 = " Into Selection" 
+
+      Run Command s_part1 + s_part2 + s_part3
+    End If 
+
+  End If  
+
+End Sub 
+
+
+'*********************************************************************************************
+Sub Handle_mi3_Points(ByVal table_name As String, ByVal sstyle As Symbol)
+'*********************************************************************************************
+
+  Dim i_color, i_shape, i_size As Logical   
+  Dim s_part1, s_part2, s_part3 As String 
+  Dim s_oldcolor, s_oldsize, s_oldshape  As String 
+  Dim l_multiple As Logical 
+
+  i_color = FALSE
+  i_shape = FALSE
+  i_size = FALSE 
+
+  Dialog
+    Title "Select Symbols by Style" 
+    Width 200 
+    Control StaticText 
+      Title "Style of selected object (MI 3.0 Symbol): "  Position 5, 5  
+
+    Control StaticText
+      Title Str$(sstyle)  Position 20, 18   Width  140  Height 22
+
+    Control GroupBox 
+      Title "Select Points With Matching"   
+      Position 5, 30  Width 189  Height 53
+            
+    Control CheckBox 
+      Title "Shape"  Position 10, 44
+      Value TRUE 
+      Into i_shape  
+
+    Control CheckBox 
+      Title "Color"  Position 10, 54
+      Value TRUE 
+      Into i_color  
+
+   Control CheckBox 
+      Title "Size"  Position 10, 64 
+      Value TRUE
+      Into i_size 
+            
+    Control OKButton   'Position  25 + shift_ok, 100
+    Control Button  Title "Cancel"  'Position 25 + shift_cancel, 100
+      Calling UserCanceled  
+
+  If CommandInfo(CMD_INFO_DLG_OK)  Then 
+    '... then the user clicked OK; proceed with the query. 
+
+    s_part1 = "Select * From " + table_name 
+
+    s_part2 = " Where Str$(obj) = ""Point"" " 
+
+    If  i_shape  Or  i_color  Or  i_size  Then 
+      s_part3 = " Into  Stylist_Temp_Query   NoSelect" 
+    Else 
+      s_part3 = " Into  Selection" 
+    End If  
+    
+    ' Issue a Select statement to select the appropriate type of features. 
+    Run Command  s_part1 + s_part2 + s_part3 
+
+    ' If the user left at least one of the check boxes checked, 
+    ' then we need to do another selection to select only the 
+    ' appropriate objects.  
+    If i_shape  Or  i_color  Or  i_size  Then 
+      s_oldcolor  = Str$(StyleAttr(sstyle,SYMBOL_COLOR))
+      s_oldshape  = Str$(StyleAttr(sstyle,SYMBOL_CODE))
+      s_oldsize   = Str$(StyleAttr(sstyle,SYMBOL_POINTSIZE))
+
+      s_part1 = "Select * From Stylist_Temp_Query " 
+      s_part2 = " Where "
+      l_multiple = FALSE
+      If  i_color  Then 
+        s_part2 = s_part2 + "StyleAttr(ObjectInfo(obj,2),2) = " + s_oldcolor + " " 
+        l_multiple = TRUE 
+      End If 
+      
+      If  i_shape  Then 
+        If l_multiple Then 
+          s_part2 = s_part2 + " And " 
+        End If 
+        s_part2 = s_part2 + "StyleAttr(ObjectInfo(obj,2),1) = "  + s_oldshape + " "
+        l_multiple = TRUE 
+      End If 
+      
+      If  i_size  Then 
+        If l_multiple Then 
+          s_part2 = s_part2 + " And " 
+        End If 
+        s_part2 = s_part2 + "StyleAttr(ObjectInfo(obj,2),3) =" + s_oldsize  +  " "
+      End If 
+      s_part3 = " Into Selection" 
+      Run Command s_part1 + s_part2 + s_part3
+    End If 
+  End If  
+End Sub
+
+
+'*********************************************************************************************
+Sub Handle_Text(ByVal table_name As String, ByVal fstyle As Font) 
+'*********************************************************************************************
+
+  Dim i_fontname, i_style, i_size, i_fgcolor, i_bgcolor As Logical   
+  Dim s_part1, s_part2, s_part3 As String 
+  Dim s_oldfontname, s_oldstyle, s_oldsize, s_oldfgcolor, s_oldbgcolor  As String 
+  Dim l_multiple As Logical 
+
+  Dialog
+    Title "Select Text Objects by Style" 
+    Width 200 
+    Control StaticText 
+      Title "Style of selected object (Text Object): "  Position 5, 5  
+
+    Control StaticText
+      Title Str$(fstyle)  Position 20, 18   Width  140  Height 22
+
+    Control GroupBox 
+      Title "Select Text Objects With Matching" 
+      Position 5, 45  Width 189  Height 65
+            
+    Control CheckBox 
+      Title "Fontname"  Position 10, 58
+      Value FALSE
+      Disable  
+      Into i_fontname  
+
+    Control CheckBox 
+      Title "Style"  Position 10, 68
+      Value TRUE 
+      Into i_style  
+
+   Control CheckBox 
+      Title "Pointize (applies only in Layout windows)" Position 10, 78 
+      Value TRUE
+      Into i_size 
+            
+   Control CheckBox 
+      Title "Foreground Color"  Position 10, 88 
+      Value TRUE
+      Into i_fgcolor
+ 
+   Control CheckBox 
+      Title "Background Color"  Position 10, 98 
+      Value TRUE
+      Into i_bgcolor
+
+    Control OKButton   'Position  25 + shift_ok, 120
+    Control Button  Title "Cancel"  'Position 25 + shift_cancel, 120
+       Calling UserCanceled  
+
+  If CommandInfo(CMD_INFO_DLG_OK)  Then 
+    '... then the user clicked OK; proceed with the query. 
+
+    s_part1 = "Select * From " + table_name 
+
+    s_part2 = " Where Str$(obj) = ""Text"" " 
+
+    If  i_fontname Or i_style Or i_size Or i_fgcolor Or i_bgcolor  Then 
+      s_part3 = " Into  Stylist_Temp_Query   NoSelect" 
+    Else 
+      s_part3 = " Into  Selection" 
+    End If  
+    
+    ' Issue a Select statement to select the appropriate type of features. 
+    Run Command  s_part1 + s_part2 + s_part3 
+
+    ' If the user left at least one of the check boxes checked, 
+    ' then we need to do another selection to select only the 
+    ' appropriate objects.  
+    If i_fontname Or i_style Or i_size Or i_fgcolor Or i_bgcolor  Then 
+
+      s_oldfontname = Str$(StyleAttr(fstyle,FONT_NAME))
+      s_oldstyle    = Str$(StyleAttr(fstyle,FONT_STYLE))
+      s_oldsize     = Str$(StyleAttr(fstyle,FONT_POINTSIZE))
+      s_oldfgcolor  = Str$(StyleAttr(fstyle,FONT_FORECOLOR))
+      s_oldbgcolor  = Str$(StyleAttr(fstyle,FONT_BACKCOLOR))
+
+      s_part1 = "Select * From Stylist_Temp_Query " 
+      s_part2 = " Where "
+      l_multiple = FALSE
+
+      If  i_fontname  Then 
+        'In the next line, the magic # 1 means: FONT_NAME 
+        s_part2 = s_part2 + "StyleAttr(ObjectInfo(obj,2),1) = "
+                 + Chr$(34) + s_oldfontname + Chr$(34) + " " 
+        l_multiple = TRUE 
+      End If 
+      
+      If  i_style  Then 
+        If l_multiple Then 
+          s_part2 = s_part2 + " And " 
+        End If 
+        'In the next line, the magic # 2 means: FONT_STYLE 
+        s_part2 = s_part2 + "StyleAttr(ObjectInfo(obj,2),2) = "  + s_oldstyle + " "
+        l_multiple = TRUE 
+      End If 
+
+      If  i_size  Then 
+        If l_multiple Then 
+          s_part2 = s_part2 + " And " 
+        End If 
+        'In the next line, the magic # 3 means: FONT_POINTSIZE 
+        s_part2 = s_part2 + "StyleAttr(ObjectInfo(obj,2),3) =" + s_oldsize  +  " "
+        l_multiple = TRUE 
+      End If 
+
+      If  i_fgcolor  Then 
+        If l_multiple Then 
+          s_part2 = s_part2 + " And " 
+        End If 
+        'In the next line, the magic # 4 means: FONT_FORECOLOR 
+        s_part2 = s_part2 + "StyleAttr(ObjectInfo(obj,2),4) =" + s_oldfgcolor  +  " "
+        l_multiple = TRUE 
+      End If 
+
+      If  i_bgcolor  Then 
+        If l_multiple Then 
+          s_part2 = s_part2 + " And " 
+        End If 
+        'In the next line, the magic # 5 means: FONT_BACKCOLOR 
+        s_part2 = s_part2 + "StyleAttr(ObjectInfo(obj,2),5) =" + s_oldbgcolor  +  " "
+      End If 
+
+      s_part3 = " Into Selection" 
+      Run Command s_part1 + s_part2 + s_part3
+    End If 
+
+  End If  
+
+End Sub
+
+
+'*********************************************************************************************
+Sub  UserCanceled 
+'*********************************************************************************************
+
+  Dialog Remove 
+End Sub 
+
+
+
+
+
+ 

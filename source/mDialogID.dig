@@ -1,0 +1,259 @@
+'===============================================================================
+'**
+'**		Author				: Montazery Hasibuan
+'**		Email				: --insert your email here--
+'**
+'**		Filename			: mDialogID.dig
+'**		Date Created		: 17 Nov 2010
+'**		Last Modified		: 2014-06-14 10:11 AM
+'**
+
+'===============================================================================
+
+'Pendeklarasian ID yang digunakan oleh dialog items
+
+'===============================================================================
+' CustomButton defines
+'===============================================================================
+Define ButtonID						9100
+Define ButtonID1					9101
+Define ButtonID2					9102
+Define ButtonID3					9103
+Define ButtonID4					9104
+Define ButtonID5					9105
+Define ButtonID6					9106
+Define ButtonID7					9107
+Define ButtonID8					9108
+Define ButtonID9					9109
+Define ButtonID10					9110
+'===============================================================================
+' OKButton defines
+'===============================================================================
+Define OKID							9111
+Define OKID1						9112
+Define OKID2						9113
+Define OKID3						9114
+Define OKID4						9115
+Define OKID5						9116
+Define OKID6						9117
+Define OKID7						9118
+Define OKID8						9119
+Define OKID9						9120
+Define OKID10						9121
+'===============================================================================
+' CancelButton defines
+'===============================================================================
+Define CancelID						9122
+Define CancelID1					9123
+Define CancelID2					9124
+Define CancelID3					9125
+Define CancelID4					9126
+Define CancelID5					9127
+Define CancelID6					9128
+Define CancelID7					9129
+Define CancelID8					9130
+Define CancelID9					9131
+Define CancelID10					9132
+'===============================================================================
+' EditText defines
+'===============================================================================
+Define EditID						9133
+Define EditID1						9134
+Define EditID2						9135
+Define EditID3						9136
+Define EditID4						9137
+Define EditID5						9138
+Define EditID6						9139
+Define EditID7						9140
+Define EditID8						9141
+Define EditID9						9142
+Define EditID10						9143
+'===============================================================================
+' StaticText defines
+'===============================================================================
+Define TextID						9144
+Define TextID1						9145
+Define TextID2						9146
+Define TextID3						9147
+Define TextID4						9148
+Define TextID5						9149
+Define TextID6						9150
+Define TextID7						9151
+Define TextID8						9152
+Define TextID9						9153
+Define TextID10						9154
+'===============================================================================
+' PopupMenu defines
+'===============================================================================
+Define PopupID						9155
+Define PopupID1						9156
+Define PopupID2						9157
+Define PopupID3						9158
+Define PopupID4						9159
+Define PopupID5						9160
+Define PopupID6						9161
+Define PopupID7						9162
+Define PopupID8						9163
+Define PopupID9						9164
+Define PopupID10					9165
+'===============================================================================
+' CheckBox defines
+'===============================================================================
+Define CheckID						9166
+Define CheckID1						9167
+Define CheckID2						9168
+Define CheckID3						9169
+Define CheckID4						9170
+Define CheckID5						9171
+Define CheckID6						9172
+Define CheckID7						9173
+Define CheckID8						9174
+Define CheckID9						9175
+Define CheckID10					9176
+'===============================================================================
+' MultiListBox defines
+'===============================================================================
+Define MListID						9177
+Define MListID1						9178
+Define MlistID2						9179
+Define MListID3						9180
+Define MListID4						9181
+Define MListID5						9182
+Define MListID6						9183
+Define MListID7						9184
+Define MListID8						9185
+Define MListID9						9186
+Define MListID10					9187
+'===============================================================================
+' GroupBox defines
+'===============================================================================
+Define GroupID						9188
+Define GroupID1						9189
+Define GroupID2						9190
+Define GroupID3						9191
+Define GroupID4						9192
+Define GroupID5						9193
+Define GroupID6						9194
+Define GroupID7						9195
+Define GroupID8						9196
+Define GroupID9						9197
+Define GroupID10					9198
+'===============================================================================
+' RadioGroup defines
+'===============================================================================
+Define RadioID						9199
+Define RadioID1						9200
+Define RadioID2						9201
+Define RadioID3						9202
+Define RadioID4						9203
+Define RadioID5						9204
+Define RadioID6						9205
+Define RadioID7						9206
+Define RadioID8						9207
+Define RadioID9						9208
+Define RadioID10					9209
+'===============================================================================
+' PenPicker defines
+'===============================================================================
+Define PenID						9210
+Define PenID1						9211
+Define PenID2						9212
+Define PenID3						9213
+Define PenID4						9214
+Define PenID5						9215
+Define PenID6						9216
+Define PenID7						9217
+Define PenID8						9218
+Define PenID9						9219
+Define PenID10						9220
+'===============================================================================
+' BrushPicker defines
+'===============================================================================
+Define BrushID						9221
+Define BrushID1						9222
+Define BrushID2						9223
+Define BrushID3						9224
+Define BrushID4						9225
+Define BrushID5						9226
+Define BrushID6						9227
+Define BrushID7						9228
+Define BrushID8						9229
+Define BrushID9						9230
+Define BrushID10					9231
+'===============================================================================
+' FontPicker defines
+'===============================================================================
+Define FontID						9232
+Define FontID1						9233
+Define FontID2						9234
+Define FontID3						9235
+Define FontID4						9236
+Define FontID5						9237
+Define FontID6						9238
+Define FontID7						9239
+Define FontID8						9240
+Define FontID9						9241
+Define FontID10						9242
+'===============================================================================
+' SymbolPicker defines
+'===============================================================================
+Define SymbolID						9243
+Define SymbolID1					9244
+Define SymbolID2					9245
+Define SymbolID3					9246
+Define SymbolID4					9247
+Define SymbolID5					9248
+Define SymbolID6					9249
+Define SymbolID7					9250
+Define SymbolID8					9251
+Define SymbolID9					9252
+Define SymbolID10					9253
+'===============================================================================
+' ListBox defines
+'===============================================================================
+Define ListID						9254
+Define ListID1						9255
+Define ListID2						9256
+Define ListID3						9257
+Define ListID4						9258
+Define ListID5						9259
+Define ListID6						9260
+Define ListID7						9261
+Define ListID8						9262
+Define ListID9						9263
+Define ListID10						9264
+'===============================================================================
+' Update Text Dialog defines
+'===============================================================================
+Define uptext1 						9780
+Define uptext2 						9301
+Define uptext3 						9302
+Define uptext4 						9303
+Define uptext5 						9304
+Define uptext6 						9305
+Define uptext7 						9306
+'===============================================================================
+' Reproject Dialog defines
+'===============================================================================
+Define rpMLB						1200
+Define rpEDP 						1201
+Define rpBTP 						1202
+Define rpRGO 						1203
+Define rpCBD 						1204
+Define rpEDD 						1205
+Define rpCBS 						1206
+Define rpEDS 						1207
+Define rpBTD 						1208
+'===============================================================================
+' mCAD Dialog defines
+'===============================================================================
+Define cLB 							9301
+Define cBT 							9302
+Define cRG 							9303
+Define cET 							9304
+Define cdBT 						9305
+Define cCB 							9306
+Define cCBX 						9307
+Define cOK 							9308
+Define cET2 						9309
+Define cdBT2 						9310

@@ -1,0 +1,128 @@
+'===============================================================================
+'**
+'**		Author				: Montazery Hasibuan
+'**		Email				: --insert your email here--
+'**
+'**		Filename			: mUpdateColumn.mb
+'**		Date Created		: 17 Nov 2010
+'**		Last Modified		: --insert the last date you edited this file--
+'**
+
+'===============================================================================
+
+Include "mDeclare.dcl"
+
+'*********************************************************************************************
+Sub ListDialog
+'*********************************************************************************************
+
+If NumTables() < 1 Then
+Note "Please open a table."
+Exit Sub
+End If
+
+  If Not TableOpen(TableSelect) Then
+    iTableName = 1
+  End If
+  
+		sColCall = "Col"
+    
+  Call GetTables  
+  Call GetColList
+  
+
+DIALOG
+    POSITION 363, 184
+    TITLE "Update Column"
+        Control StaticText POSITION 12, 8 WIDTH 50 HEIGHT 10 ID TextID TITLE "Select Table:"
+        Control StaticText POSITION 148, 8 WIDTH 50 HEIGHT 10 ID TextID1 TITLE "Select Column:"
+        Control ListBox POSITION 11, 18 WIDTH 127 HEIGHT 125 ID ListID TITLE From Variable sTableList CALLING RedoColList INTO iTableName 'VALUE iTableName
+        Control ListBox POSITION 147, 18 WIDTH 117 HEIGHT 125 ID ListID1 INTO i_select CALLING EnableButton 'TITLE From Variable sColumnList 
+        Control GroupBox POSITION 276, 20 WIDTH 117 HEIGHT 30 TITLE "Length"
+        Control Button POSITION 288, 31 WIDTH 37 HEIGHT 15 ID ButtonID TITLE "M" CALLING ProsesUpdate DISABLE
+        Control Button POSITION 343, 31 WIDTH 37 HEIGHT 15 ID ButtonID1 TITLE "Km" CALLING ProsesUpdate DISABLE
+        Control GroupBox POSITION 276, 55 WIDTH 117 HEIGHT 30 TITLE "Area"
+        Control Button POSITION 288, 66 WIDTH 37 HEIGHT 15 ID ButtonID2 TITLE "Ha" CALLING ProsesUpdate DISABLE
+        Control Button POSITION 343, 66 WIDTH 37 HEIGHT 15 ID ButtonID3 TITLE "M2" CALLING ProsesUpdate DISABLE
+        Control GroupBox POSITION 276, 90 WIDTH 117 HEIGHT 30 TITLE "Coordinate"
+        Control Button POSITION 288, 101 WIDTH 37 HEIGHT 15 ID ButtonID4 TITLE "X_Coord" CALLING ProsesUpdate DISABLE
+        Control Button POSITION 343, 101 WIDTH 37 HEIGHT 15 ID ButtonID5 TITLE "Y_Coord" CALLING ProsesUpdate DISABLE
+        Control CheckBox POSITION 276, 130 ID CheckID TITLE "&Browse Result" VALUE 0 DISABLE 'CALLING ProsesUpdate INTO lBrowse WIDTH 53
+        Control CancelButton POSITION 351, 130 WIDTH 38 HEIGHT 14 ID CancelID TITLE "Cancel"
+
+End Sub
+
+
+'*********************************************************************************************
+Sub RedoColList
+'*********************************************************************************************
+
+  iTableName = ReadControlValue(ListID)
+  
+  Call GetColList
+  
+  Alter Control ListID1 Title From Variable sColumnList
+  Alter Control ButtonID Disable
+  Alter Control ButtonID1 Disable
+  Alter Control ButtonID2 Disable
+  Alter Control ButtonID3 Disable
+  Alter Control ButtonID4 Disable
+  Alter Control ButtonID5 Disable
+  Alter Control CheckID Disable
+
+End Sub RedoColList
+
+
+'*********************************************************************************************
+Sub EnableButton
+'*********************************************************************************************
+
+  If ReadControlValue(ListID1) < 1 Then
+    Else
+      Alter Control ButtonID Enable
+      Alter Control ButtonID1 Enable
+      Alter Control ButtonID2 Enable
+      Alter Control ButtonID3 Enable
+      Alter Control ButtonID4 Enable
+      Alter Control ButtonID5 Enable
+      Alter Control CheckID Enable
+  End If
+    
+End Sub
+
+'*********************************************************************************************
+Sub ProsesUpdate
+'*********************************************************************************************
+
+Dim nQuery as String
+Dim sHitung as String
+Dim sBrowse as String
+
+
+  i_select = ReadControlValue(ListID1)
+    
+  If TriggerControl() = ButtonID Then 
+      sHitung = "SphericalObjectLen(obj, ""m"")"
+    ElseIf TriggerControl() = ButtonID1 Then 
+      sHitung = "SphericalObjectLen(obj, ""km"")"
+    ElseIf TriggerControl() = ButtonID2 Then 
+      sHitung = "Area(obj, ""hectare"")"
+    ElseIf TriggerControl() = ButtonID3 Then 
+      sHitung = "Area(obj, ""sq m"")"
+    ElseIf TriggerControl() = ButtonID4 Then 
+      sHitung = "CentroidX(Obj)"
+    ElseIf TriggerControl() = ButtonID5 Then 
+      sHitung = "CentroidY(Obj)"
+  End If
+  
+  If ReadControlValue(CheckID) <> 0 Then
+    sBrowse = " Browse * from " + sTableList(iTableName)
+  End If
+  
+  nQuery = "Update " + sTableList(iTableName) + " Set " + sColumnList(i_select) + " = " + sHitung + sBrowse
+  Run Command nQuery
+  Dialog Remove
+
+
+End Sub
+

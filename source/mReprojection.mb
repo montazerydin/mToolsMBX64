@@ -1,0 +1,209 @@
+'===============================================================================
+'**
+'**		Author				: Montazery Hasibuan
+'**		Email				: --insert your email here--
+'**
+'**		Filename			: mReprojection.mb
+'**		Date Created		: 17 Nov 2010
+'**		Last Modified		: --insert the last date you edited this file--
+'**
+
+'===============================================================================
+
+Include "mDeclare.dcl"
+
+'*********************************************************************************************
+Sub ReProjTab
+'*********************************************************************************************
+
+Dim l As Integer
+Dim sEDP, sEDD, sEDS As String
+Dim nRGO As Integer
+Dim lCBD, lCBS As Logical
+Dim sTbPath, sTbTmp, sTbNew, sTbName As String
+Dim rgQry1, rgQry2, sPathDlm As String
+
+Call GetTables
+
+  DIALOG
+    WIDTH 271 HEIGHT 201
+    TITLE "Reproject Multi Tables"
+    CONTROL GroupBox
+      POSITION 4, 2
+      WIDTH 262 HEIGHT 110
+      TITLE "Select Tables"
+		CONTROL MultiListBox
+      POSITION 9, 11
+      WIDTH 250 HEIGHT 65
+      ID cLB
+      TITLE From Variable sTableList
+		Control StaticText Title "reproj" ID 9500 Position 10, 81 Hide
+    CONTROL StaticText
+      POSITION 10, 81
+      WIDTH 60 HEIGHT 10
+      TITLE "Target Projection :"
+    CONTROL EditText
+      POSITION 71, 80
+      WIDTH 188 HEIGHT 12
+      ID rpEDP
+      VALUE "Please select a new projection"
+      INTO sEDP
+			Disable
+		CONTROL Button
+      POSITION 202, 94
+      WIDTH 57 HEIGHT 14
+      ID rpBTP
+      TITLE "New Projection"
+      CALLING ChangeProj
+		CONTROL GroupBox
+      POSITION 4, 114
+      WIDTH 262 HEIGHT 68
+      TITLE "Options"
+		CONTROL RadioGroup
+      POSITION 15, 125
+      ID rpRGO
+      TITLE "Overwrite existing tables (NOT RECOMMENDED);Create new tables"
+      CALLING rpDlgLst
+      VALUE 2
+      INTO nRGO
+    CONTROL CheckBox
+      POSITION 15, 153
+      WIDTH 79
+      ID rpCBD
+      TITLE "In specific directory"
+      CALLING rpDlgLst2
+      VALUE 0
+      INTO lCBD
+		CONTROL EditText
+      POSITION 15, 167
+      WIDTH 130 HEIGHT 12
+      ID cET
+			Disable
+      INTO sEDD
+    CONTROL Button
+      POSITION 145, 165
+      WIDTH 18 HEIGHT 14
+      ID rpBTD
+      TITLE "..."
+      CALLING GetDirectory	
+			Disable
+		CONTROL CheckBox
+      POSITION 168, 167
+      WIDTH 30
+      TITLE "Suffix"
+      ID rpCBS
+      CALLING rpDlgLst3
+      VALUE 1
+      INTO lCBS
+    CONTROL EditText
+      POSITION 201, 167
+      WIDTH 57 HEIGHT 12
+      ID rpEDS
+      VALUE "_reproject"
+      INTO sEDS	
+    CONTROL OKButton
+      CALLING MLBOKButton
+    CONTROL CancelButton
+		
+		
+		If CommandInfo(CMD_INFO_DLG_OK) Then
+					For l = 1 To Ubound(iTableSelArray)
+						sTbPath = TableInfo(sTableList(iTableSelArray(l)), TAB_INFO_TABFILE)
+						sTbTmp = PathToDirectory$(sTbPath) + sTableList(iTableSelArray(l)) + sEDS + ".TAB"
+								If nRGO = 1 Then
+									sTbTmp = PathToDirectory$(sTbPath) + sTableList(iTableSelArray(l)) + "_reproject.TAB"
+									rgQry1 = "Commit Table " + sTableList(iTableSelArray(l)) + " As """ + sTbTmp + """ TYPE NATIVE Charset ""WindowsLatin1"" " + sProjList
+									rgQry1 = rgQry1 + " Close Table " + sTableList(iTableSelArray(l))
+									rgQry1 = rgQry1 + " Open Table """ + sTbTmp + """"
+									sTbName = PathToTableName$(sTbTmp)
+									rgQry1 = rgQry1 + " Commit Table " + sTbName + " As """ + sTbPath + """ TYPE NATIVE Charset ""WindowsLatin1"""
+									rgQry1 = rgQry1 + " Drop Table " + sTbName
+									rgQry1 = rgQry1 + " Open Table """ + sTbPath + """"
+									Run Command rgQry1									
+								ElseIf nRGO = 2 Then
+									If lCBD = 0 Then
+										rgQry2 = "Commit Table " + sTableList(iTableSelArray(l)) + " As """ + sTbTmp + """ TYPE NATIVE Charset ""WindowsLatin1"" " + sProjList
+										Run Command rgQry2
+									ElseIf lCBD = 1 Then
+											If sEDS = "" Or lCBS = 0 Then
+												sEDS = ""
+											End If
+										sPathDlm = Right$(sEDD, 1)
+											If sPathDlm = "\" Then
+												rgQry2 = "Commit Table " + sTableList(iTableSelArray(l)) + " As """ + sEDD + sTableList(iTableSelArray(l)) + sEDS + ".TAB"" TYPE NATIVE Charset ""WindowsLatin1"" " + sProjList
+												Else
+												rgQry2 = "Commit Table " + sTableList(iTableSelArray(l)) + " As """ + sEDD + "\" + sTableList(iTableSelArray(l)) + sEDS + ".TAB"" TYPE NATIVE Charset ""WindowsLatin1"" " + sProjList
+											End If
+										Run Command rgQry2
+									End If
+								End If
+					Next
+			Else
+				Exit Sub
+    End If
+			
+End Sub
+
+'*********************************************************************************************
+Sub ChangeProj
+'*********************************************************************************************
+
+sProjList = ChooseProjection$("", TRUE)
+
+If sProjList = "" Then
+	sProjName = ""
+	Note "Anda tidak memilih Sistem Koordinat!"
+	Exit Sub
+'	Call ReProjTab
+Else
+	sProjName = CoordSysName$(sProjList)
+	Alter Control rpEDP Value sProjName
+End If
+
+End Sub
+
+
+'*********************************************************************************************
+Sub rpDlgLst
+'*********************************************************************************************
+
+If ReadControlValue(rpRGO)=2 Then
+	Alter Control rpCBD Value 0 Enable
+	Alter Control cET Value "" Disable
+	Alter Control rpCBS Value 1 Enable
+	Alter Control rpEDS Value "_reproject" Enable
+	Else
+	Alter Control rpCBD Value 0 Disable
+	Alter Control cET Value "" Disable
+	Alter Control rpCBS Value 0 Disable
+	Alter Control rpEDS Value "" Disable
+	Call rpDlgLst2
+End If
+End Sub
+
+'*********************************************************************************************
+Sub rpDlgLst2
+'*********************************************************************************************
+
+If ReadControlValue(rpCBD)=0 Then
+	Alter Control cET Value "" Disable
+	Alter Control rpBTD Disable
+	Else
+	Alter Control cET Enable
+	Alter Control rpBTD Enable
+	Call rpDlgLst3
+End If
+
+End Sub
+
+'*********************************************************************************************
+Sub rpDlgLst3
+'*********************************************************************************************
+
+If ReadControlValue(rpCBS)=0 Then
+	Alter Control rpEDS Value "" Disable
+	Else
+	Alter Control rpEDS Value "_reproject" Enable
+End If	
+
+End Sub

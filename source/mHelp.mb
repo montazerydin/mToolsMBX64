@@ -1,0 +1,88 @@
+'===============================================================================
+'**
+'**		Author				: Montazery Hasibuan
+'**		Email				: --insert your email here--
+'**
+'**		Filename			: mHelp.mb
+'**		Date Created		: 17 Nov 2010
+'**		Last Modified		: --insert the last date you edited this file--
+'**
+
+'===============================================================================
+
+Include "mDeclare.dcl"
+
+sub MnuHelp
+	call HelpShow (ApplicationDirectory$()+"mToolsMBX.chm", "")
+end sub
+
+sub MnuHelpTS
+	call HelpShow (ApplicationDirectory$()+"mToolsMBX.chm", "10.html")
+end sub
+
+sub HelpHTML
+	call HelpShow (ApplicationDirectory$()+"Frames.htm", "")
+end sub 
+
+'======================================================================
+sub HelpShow (
+	byval sHelpFile as string,
+	byval sTopic as string)
+'----------------------------------------------------------------------
+dim nStatus as integer
+dim sErrorMsg as string
+dim sApp as string
+
+	sApp = space$(255)
+	nStatus = FindExecutable(PathToFilename$(sHelpfile),
+		PathToDirectory$(sHelpFile), sApp)
+	if nStatus <= 32 then
+		do case nStatus
+		case ERROR_OUT_OF_MEMORY
+			sErrorMsg = "Out of memory"
+		case ERROR_NO_ASSOCIATION
+			sErrorMsg = "no association for *." + right$(sHelpFile,3)+" files."
+		case ERROR_FILE_NOT_FOUND
+			sErrorMsg = sHelpFile + chr$(10)+ "file not found"
+		case ERROR_PATH_NOT_FOUND
+			sErrorMsg = sHelpFile + chr$(10)+ "path not found"
+		case ERROR_BAD_FORMAT
+			sErrorMsg = "bad format"
+		case else
+			sErrorMsg = "unknown error " + str$(nStatus)
+		end case
+
+		note "FindExecutable failed: " + sErrorMsg
+		exit sub
+	end if
+
+	if sTopic = "" then
+		nStatus = WinExec (sApp+ " " + sHelpFile, SHOW_OPENWINDOW)
+	else
+		if right$(sHelpFile, 3) = "chm" then
+			nStatus = WinExec (sApp+ " " + sHelpFile+"::/"+sTopic, SHOW_OPENWINDOW)
+		else
+			nStatus = WinExec (sApp+ " " + sHelpFile, SHOW_OPENWINDOW)
+		end if
+	end if
+
+	if nStatus <= 32 then
+		do case nStatus
+		case ERROR_OUT_OF_MEMORY
+			sErrorMsg = "Out of memory"
+		case ERROR_NO_ASSOCIATION
+			sErrorMsg = "no association for *." + right$(sHelpFile,3)+" files."
+		case ERROR_FILE_NOT_FOUND
+			sErrorMsg = sApp + chr$(10)+ "file not found"
+		case ERROR_PATH_NOT_FOUND
+			sErrorMsg = sApp + chr$(10)+ "path not found"
+		case ERROR_BAD_FORMAT
+			sErrorMsg = "bad format"
+		case else
+			sErrorMsg = "unknown error " + str$(nStatus)
+		end case
+
+		note "WinExec: " + sErrorMsg
+	end if
+
+end sub

@@ -1,0 +1,259 @@
+'===============================================================================
+'**
+'**		Author				: Montazery Hasibuan
+'**		Email				: --insert your email here--
+'**
+'**		Filename			: mToolsMBX.mb
+'**		Date Created		: 17 Nov 2010
+'**		Last Modified		: 2014-06-14 10:11 AM
+'**
+
+'===============================================================================
+
+
+Include "mDeclare.dcl"
+
+'*********************************************************************************************
+Sub Main 								'Prosedur utama program, disini awal program berjalan
+'*********************************************************************************************
+
+Dim sGetRegSer, sEmail As String
+
+	If FileExists(ApplicationDirectory$()+"mLibrary.dll") And FileExists(ApplicationDirectory$()+"mLibIcon.dll")
+	Then
+	Else
+		Note "You have missing dependencies file(s), please contact" + 			
+		" the program author." + Chr$(13) + "Thank You."
+		End Program
+	End If
+
+sEmail          = GetRegistryString(HKEY_LOCAL_MACHINE, "SOFTWARE\mTools\Email")
+sGetRegSer      = GetRegistryString(HKEY_LOCAL_MACHINE, "SOFTWARE\mTools\Serial")
+
+Call MainTools
+
+
+End Sub													'Akhir dari prosedur Main
+
+
+'*********************************************************************************************
+Sub MainTools 											'Prosedur menu dan button
+'*********************************************************************************************
+
+Create menu "Graticule" ID 1009 as									'Membuat menu Graticule
+	"Add Graticule" ID 101 Calling add_graticule_handler,
+	"Remove Graticule" ID 102 Calling remove_graticule_handler,
+	"Graticule Options" ID MFish_menu_LocalGraticuleOptions 
+		Calling local_graticule_options_menuhandler
+	' "(-",
+	' "About graticule" ID MFish_menu_AboutGraticule calling about_graticule_handler
+
+Create Menu "mToolsMBX" As											'Membuat menu mTools
+    "Update Column"
+    Calling ListDialog,
+    "Split Table"
+    Calling SplitTable,	
+	"Sort Table"
+    Calling SortDlg,
+    "Update Column from Text"
+    Calling upText,
+    "Auto Label"
+    Calling LabelDialog,
+	"Reproject Tables"
+	Calling ReProjTab,
+	"Import DWG/DXF"
+	Calling mCAD,
+	"Import Garmin GDB"
+	Calling mGDB,
+    "Workspace Path"
+    Calling wToolHandler,
+    "Shortcuts"
+    Calling mShort,
+    "Pack Multi Table"
+    Calling PackDlg,	
+	"(-",	
+    "Query Cleaner"
+    Calling QClean,
+    "Select by Styles"
+    Calling ButtonHandler,
+	"SyncFrame"
+    Calling mSyncFrame,
+	"(Graticule" As "Graticule",
+	"Auto Layer Editable"
+	Calling tbHandler,
+	"(-",
+	"Help"
+    Calling MnuHelp,
+    "About mToolsMBX"
+    Calling aboutprog,
+    "Exit"
+    Calling bye
+
+  Alter Menu Bar Add "mToolsMBX"									'Menambahkan menu mToolsMBX pada Menu Bar
+
+  
+  Create ButtonPad "mToolsMBX" as									'Membuat ButtonPad mToolsMBX
+	  PushButton
+	  Icon 8001 File "mLibIcon.dll"
+		HelpMsg "Update a column\nUpdate Column"
+		Calling ListDialog
+	  PushButton
+	  Icon 8003 File "mLibIcon.dll"
+		HelpMsg "Split Tabel using Column\nSplit Table"
+		Calling SplitTable
+	  PushButton
+	  Icon 8005 File "mLibIcon.dll"
+		HelpMsg "Sort Table\nSort Table"
+		Calling SortDlg
+	  PushButton
+	  Icon 8007 File "mLibIcon.dll"
+		HelpMsg "Update a column from text object\nUpdate Text from Table"
+		Calling upText
+	  PushButton
+	  Icon 8009 File "mLibIcon.dll"
+		HelpMsg "Autolabel with Expression\nAuto Label"
+		Calling LabelDialog
+	  PushButton
+	  Icon 8011 File "mLibIcon.dll"
+		HelpMsg "Reproject multi tables\nReproject Tables"
+		Calling ReProjTab
+	  PushButton
+	  Icon 8013 File "mLibIcon.dll"
+		HelpMsg "Import Multiple DWG/DXF Files\nImport DWG/DXF"
+		Calling mCAD
+	  PushButton
+	  Icon 8015 File "mLibIcon.dll"
+		HelpMsg "Import Multiple Garmin GDB Files\nImport Garmin GDB"
+		Calling mGDB
+	  ToolButton
+	  Icon 8017 File "mLibIcon.dll"
+		HelpMsg "Workspace Path\nWorkspace Path"
+		Calling wToolHandler
+	  PushButton
+	  Icon 8019 File "mLibIcon.dll"
+		HelpMsg "Custom shortcuts\nShortcuts"
+		Calling mShort
+	  PushButton
+	  Icon 8021 File "mLibIcon.dll"
+		HelpMsg "Pack Multi Table\nPack Multi Table"
+		calling PackDlg
+	  Separator
+	  PushButton
+	  Icon 8023 File "mLibIcon.dll"
+		HelpMsg "Close all Query Table\nQuery Cleaner"
+		calling QClean
+	  PushButton
+	  Icon 8025 File "mLibIcon.dll"
+		HelpMsg "Displays dialog to select objects by style\nSelect By Style"
+		calling Buttonhandler
+	  PushButton
+	  Icon 8027 File "mLibIcon.dll"
+		HelpMsg "Sync between frame and map window\nSyncFrame"
+		calling mSyncFrame
+	  ToggleButton
+		Icon 8029 File "mLibIcon.dll"
+		HelpMsg "Create a dynamic Grid\nGraticule"
+		Calling grtbhandler
+	  ToggleButton
+		Icon 8031 File "mLibIcon.dll"
+		HelpMsg "Set Layer Editable Automatically\nAuto Edit Layer"
+		Calling tbHandler
+	  Separator
+	  PushButton
+	  Icon 8033 File "mLibIcon.dll"
+		HelpMsg "mTools Help File\nmToolsMBX Help"
+		calling MnuHelp
+	  PushButton
+	  Icon 8035 File "mLibIcon.dll"
+		HelpMsg "mTools Description\nAbout mToolsMBX"
+		calling aboutprog
+	  PushButton
+	  Icon 8037 File "mLibIcon.dll"
+		HelpMsg "Exit Program\nExit"
+		Calling Bye
+	  Show
+	  Fixed
+	  ToolbarPosition (1,7)
+  
+tbstat = FALSE
+gtbstat = FALSE
+
+End Sub
+
+
+'*********************************************************************************************
+Sub Bye													'Prosedur keluar aplikasi
+'*********************************************************************************************
+
+Dim keluar as Logical									'Pendeklarasian variabel yang digunakan untuk prosedur keluar aplikasi
+
+'Inisiasi variabel keluar dengan fungsi Ask
+keluar = Ask ("Apakah Anda ingin keluar dari aplikasi mTools?", "Ya", "Tidak")
+  
+  If (keluar) Then
+		End Program
+    Else
+  End If
+
+End Sub
+
+
+'*********************************************************************************************
+Sub cancel_handler										'Prosedur untuk menangkap pilihan user saat registrasi
+'*********************************************************************************************
+
+  If TriggerControl() = CancelID1
+	Then
+		Exit Sub
+  End If
+  
+End Sub
+
+
+'*********************************************************************************************
+Sub LoadApp												'Prosedur input nilai registri untuk autoload aplikasi
+'*********************************************************************************************
+
+Dim askLoad As Logical
+Dim sAppDir As String
+
+askLoad = Ask("Make mToolsMBX autoload?", "Yes", "No")
+sAppDir = ApplicationDirectory$() + "mTools.MBX"
+
+'Penulisan ke registri berdasarkan versi MapInfo yang digunakan
+  If (askLoad) Then
+		If SystemInfo(SYS_INFO_MIVERSION) = 1050 Then
+				Call WriteRegistryInt(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1050\Tools\80000\", "Autoload", REG_DWORD, 1)
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1050\Tools\80000\", "Description", REG_SZ, "A collection of handy tools.")
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1050\Tools\80000\", "Location", REG_SZ, sAppDir)
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1050\Tools\80000\", "Owner", REG_SZ, "USER_DEFINED")
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1050\Tools\80000\", "Title", REG_SZ, "@mToolsMBX")
+			ElseIf SystemInfo(SYS_INFO_MIVERSION) = 1100 Then
+				Call WriteRegistryInt(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1100\Tools\80000\", "Autoload", REG_DWORD, 1)
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1100\Tools\80000\", "Description", REG_SZ, "A collection of handy tools.")
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1100\Tools\80000\", "Location", REG_SZ, sAppDir)
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1100\Tools\80000\", "Owner", REG_SZ, "USER_DEFINED")
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1100\Tools\80000\", "Title", REG_SZ, "@mToolsMBX")
+			ElseIf SystemInfo(SYS_INFO_MIVERSION) = 1150 Then
+				Call WriteRegistryInt(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1150\Tools\80000\", "Autoload", REG_DWORD, 1)
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1150\Tools\80000\", "Description", REG_SZ, "A collection of handy tools.")
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1150\Tools\80000\", "Location", REG_SZ, sAppDir)
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1150\Tools\80000\", "Owner", REG_SZ, "USER_DEFINED")
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1150\Tools\80000\", "Title", REG_SZ, "@mToolsMBX")
+			ElseIf SystemInfo(SYS_INFO_MIVERSION) = 1200 Then
+				Call WriteRegistryInt(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1200\Tools\80000\", "Autoload", REG_DWORD, 1)
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1200\Tools\80000\", "Description", REG_SZ, "A collection of handy tools.")
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1200\Tools\80000\", "Location", REG_SZ, sAppDir)
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1200\Tools\80000\", "Owner", REG_SZ, "USER_DEFINED")
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1200\Tools\80000\", "Title", REG_SZ, "@mToolsMBX")
+			ElseIf SystemInfo(SYS_INFO_MIVERSION) = 1250 Then
+				Call WriteRegistryInt(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1250\Tools\80000\", "Autoload", REG_DWORD, 1)
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1250\Tools\80000\", "Description", REG_SZ, "A collection of handy tools.")
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1250\Tools\80000\", "Location", REG_SZ, sAppDir)
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1250\Tools\80000\", "Owner", REG_SZ, "USER_DEFINED")
+				Call WriteRegistryStr(HKEY_CURRENT_USER, "Software\MapInfo\MapInfo\Professional\1250\Tools\80000\", "Title", REG_SZ, "@mToolsMBX")
+		End If
+	 Else
+  End If
+
+End Sub
