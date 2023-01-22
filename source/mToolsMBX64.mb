@@ -13,6 +13,7 @@
 
 Include "mDeclare.dcl"
 Include "Library\RIBBONLib.def"
+Include "Library\ProgramInfo.def"
 
 Dim mnFirstBaseMapControlID as Integer
 
@@ -47,6 +48,17 @@ Dim nCtrlIdx as Integer,
 	sGroupName, sGroupNamec, sGroupNamed as String
 
 Dim i as Integer
+
+'***Initializing ProgramInfo
+Call PRGISetApplicationName("mToolsMBX64")
+Call PRGISetApplicationVersion("3.0.0")
+Call PRGISetApplicationCopyrightYear("2023")
+Call PRGISetApplicationDevelopedBy("Montazery Hasibuan")
+Call PRGISetCopyrightCompany("Private")
+Call PRGISetWebPageName("")
+Call PRGISetWebPageURL("")
+Call PRGISetApplicationImageUri(ApplicationDirectory$() & "icon\about.png")
+Call PRGISetDescription("Will be updated soon")
 
 'Call RBNNotificationShow("mToolsMBX Ribbon Version", "Launching...", Notify_Info, 2000)
 
